@@ -24,50 +24,76 @@ Result: institutions stay out. AegisFlow removes that blocker.
 ## How it works
 
 ```
-[ Web app ]  ──►  [ TEE verifier ]  ──►  [ FDC ]  ──►  [ Gate contract ]
- (React)          (private AML check)     (notary)      (allow / deny mint)
-                        │
-                        ▼
-                 [ AML API: Chainalysis / TRM ]
+[ Web app ]──►[ TEE verifier ]──►[ FDC (~100 providers) ]──►[ Gate contract ]
+ (React)      real OFAC SDN        Web2Json attestation      allow / deny mint
+              screening            Merkle-proof consensus    (Coston2)
 ```
 
 1. A user requests to mint FXRP from an XRPL address.
-2. The **TEE verifier** (running in a Phala confidential VM) queries an AML API
-   and produces a **signed verdict** — the raw data never leaves the enclave.
-3. The **FDC** (Flare Data Connector) certifies the verdict on-chain, trustlessly.
-4. The **Gate contract** on Flare reads the certified verdict and allows or blocks
-   the mint, keeping a private audit proof.
+2. The **verifier** (TEE service) screens the address against the **official
+   OFAC SDN sanctions list** (real data, fail-closed) and exposes a
+   deterministic `/attest/<address>` endpoint returning only the verdict.
+3. The **FDC** (Flare Data Connector): ~100 independent data providers each
+   fetch that endpoint, reach consensus, and produce a **Merkle proof** — no
+   single party (not even us) can forge a verdict.
+4. The **AegisFlowGate** contract verifies the FDC proof on-chain
+   (`verifyWeb2Json`), pins the attested URL to our verifier, stores the
+   verdict, and allows or blocks the FXRP mint accordingly.
+
+### Verdicts
+
+| Code | Label   | Meaning                          |
+|------|---------|----------------------------------|
+| 1    | CLEAR   | not sanctioned — mint allowed    |
+| 2    | REVIEW  | uncertainty — fail-closed, held  |
+| 3    | BLOCKED | OFAC SDN match — mint denied     |
+
+## Live deployment
+
+| Piece | Where |
+|-------|-------|
+| Verifier API | https://aegisflow.shadrakbessanh.me (`/health`, `/screen`, `/attest/<addr>`) |
+| Gate contract (Coston2) | `0x7d7F06AFd4C178b07E4cE69085d6f79721Cca797` |
+| Sanctions data | Official OFAC SDN digital-currency list (XRP), refreshed hourly |
 
 ## Tech stack
 
-| Layer | Tech | Hosting |
-|-------|------|---------|
-| Frontend | React / Next.js + Tailwind + wagmi | Vercel |
-| TEE verifier | Python + Docker | Phala Cloud (dstack) |
-| Notary | Flare Data Connector (Web2Json) | Flare Coston2 |
-| Gate contract | Solidity + Hardhat | Flare Coston2 |
-| AML data | Chainalysis / TRM free sanctions API | external |
+| Layer | Tech |
+|-------|------|
+| Gate contract | Solidity 0.8.25 + Flare periphery (`ContractRegistry`, `IWeb2Json`) |
+| Attestation | FDC Web2Json on Coston2 (verifier + FdcHub + DA layer) |
+| Verifier | Python FastAPI, Docker-ready for Phala TEE (dstack) |
+| Connector | Node.js + ethers v6 |
+| Frontend | Next.js + wagmi (in progress) |
 
 ## Repository layout
 
 ```
 aegisflow/
-├── contracts/   # Solidity gate contract + Hardhat setup
-├── tee/         # Python AML verifier + Dockerfile (runs in Phala TEE)
+├── contracts/   # AegisFlowGate + Hardhat, tests, deploy & FDC attestation scripts
+├── tee/         # AML verifier (FastAPI) + Dockerfile for Phala confidential VM
+├── connector/   # verifier -> on-chain glue (dev/attestor path)
 └── web/         # Next.js frontend
+```
+
+## Running the FDC attestation
+
+```bash
+cd contracts
+GATE_ADDRESS=0x7d7F06AFd4C178b07E4cE69085d6f79721Cca797 \
+XRPL_ADDRESS=<address-to-screen> \
+npx hardhat run scripts/fdcAttest.ts --network coston2
 ```
 
 ## Build roadmap
 
-- [ ] **Step 1** — Skeleton: gate contract on Coston2 + basic web page (hardcoded verdict)
-- [ ] **Step 2** — Real AML check (verifier calls Chainalysis/TRM, off-enclave)
-- [ ] **Step 3** — Move verifier into the Phala TEE
-- [ ] **Step 4** — Wire FDC attestation so the gate trusts the verdict trustlessly
-- [ ] **Step 5** — Polish UI (3-level verdict), demo video, submission writeup
-
-## Status
-
-🚧 Early development — hackathon project. Deadline: **August 14, 2026**.
+- [x] Gate contract on Coston2 + tests
+- [x] Real OFAC sanctions screening (mock removed)
+- [x] Public verifier deployment (cloudflared)
+- [x] Trustless FDC Web2Json verdict path
+- [ ] Verifier inside Phala TEE (confidential compute) + remote attestation
+- [ ] Web UI (verify / dashboard / proof screens)
+- [ ] FAssets AssetManager integration for the actual FXRP mint
 
 ## License
 
