@@ -98,6 +98,11 @@ async function main() {
   const [signer] = await ethers.getSigners();
   console.log(`Attesting ${xrplAddress} via FDC as ${signer.address}\n`);
 
+  // Optional shortcut: reuse an already-finalized round (skip pay/wait).
+  const reuseRound = process.env.REUSE_ROUND_ID
+    ? Number(process.env.REUSE_ROUND_ID)
+    : undefined;
+
   // Resolve Flare system contracts through the universal registry.
   const registry = new ethers.Contract(FLARE_CONTRACT_REGISTRY, REGISTRY_ABI, signer);
   const [hubAddr, feeAddr, fsmAddr, relayAddr, fdcVerAddr] = await Promise.all([
@@ -114,35 +119,41 @@ async function main() {
   const abiEncodedRequest = await prepareRequest(xrplAddress);
   console.log("   abiEncodedRequest:", abiEncodedRequest.slice(0, 66), "...");
 
-  // 2) pay + submit
-  const feeConfig = new ethers.Contract(feeAddr, FEE_CONFIG_ABI, signer);
-  const fee = await feeConfig.getRequestFee(abiEncodedRequest);
-  console.log(`\n2) submitting to FdcHub (fee ${ethers.formatEther(fee)} C2FLR) ...`);
-  const hub = new ethers.Contract(hubAddr, FDC_HUB_ABI, signer);
-  const tx = await hub.requestAttestation(abiEncodedRequest, { value: fee });
-  const receipt = await tx.wait();
-  console.log("   tx:", receipt.hash);
+  let roundId: number;
+  if (reuseRound !== undefined) {
+    roundId = reuseRound;
+    console.log(`\n2-3) reusing finalized round ${roundId} (skip submit/wait)`);
+  } else {
+    // 2) pay + submit
+    const feeConfig = new ethers.Contract(feeAddr, FEE_CONFIG_ABI, signer);
+    const fee = await feeConfig.getRequestFee(abiEncodedRequest);
+    console.log(`\n2) submitting to FdcHub (fee ${ethers.formatEther(fee)} C2FLR) ...`);
+    const hub = new ethers.Contract(hubAddr, FDC_HUB_ABI, signer);
+    const tx = await hub.requestAttestation(abiEncodedRequest, { value: fee });
+    const receipt = await tx.wait();
+    console.log("   tx:", receipt.hash);
 
-  // compute round id from block timestamp
-  const block = await ethers.provider.getBlock(receipt.blockNumber);
-  const fsm = new ethers.Contract(fsmAddr, SYSTEMS_MANAGER_ABI, signer);
-  const [t0, dur] = await Promise.all([
-    fsm.firstVotingRoundStartTs(),
-    fsm.votingEpochDurationSeconds(),
-  ]);
-  const roundId = Number((BigInt(block!.timestamp) - BigInt(t0)) / BigInt(dur));
-  console.log("   voting round:", roundId);
+    // compute round id from block timestamp
+    const block = await ethers.provider.getBlock(receipt.blockNumber);
+    const fsm = new ethers.Contract(fsmAddr, SYSTEMS_MANAGER_ABI, signer);
+    const [t0, dur] = await Promise.all([
+      fsm.firstVotingRoundStartTs(),
+      fsm.votingEpochDurationSeconds(),
+    ]);
+    roundId = Number((BigInt(block!.timestamp) - BigInt(t0)) / BigInt(dur));
+    console.log("   voting round:", roundId);
 
-  // 3) wait for finalization
-  const fdcVer = new ethers.Contract(fdcVerAddr, FDC_VERIFICATION_ABI, signer);
-  const protocolId = await fdcVer.fdcProtocolId();
-  const relay = new ethers.Contract(relayAddr, RELAY_ABI, signer);
-  process.stdout.write("\n3) waiting for round finalization ");
-  while (!(await relay.isFinalized(protocolId, roundId))) {
-    process.stdout.write(".");
-    await sleep(20000);
+    // 3) wait for finalization
+    const fdcVer = new ethers.Contract(fdcVerAddr, FDC_VERIFICATION_ABI, signer);
+    const protocolId = await fdcVer.fdcProtocolId();
+    const relay = new ethers.Contract(relayAddr, RELAY_ABI, signer);
+    process.stdout.write("\n3) waiting for round finalization ");
+    while (!(await relay.isFinalized(protocolId, roundId))) {
+      process.stdout.write(".");
+      await sleep(20000);
+    }
+    console.log(" finalized!");
   }
-  console.log(" finalized!");
 
   // 4) fetch proof from DA layer
   console.log("\n4) fetching proof from DA layer ...");
@@ -163,8 +174,11 @@ async function main() {
   // 5) submit to the gate
   console.log("\n5) submitting proof to AegisFlowGate ...");
   const decoded = ethers.AbiCoder.defaultAbiCoder().decode([RESPONSE_TUPLE], proof.response_hex)[0];
+  // ethers Result objects are read-only proxies; convert to a plain object
+  // before passing back in as a transaction argument.
+  const data = decoded.toObject(true);
   const gate = await ethers.getContractAt("AegisFlowGate", gateAddress);
-  const tx2 = await gate.submitVerdictWithProof({ merkleProof: proof.proof, data: decoded });
+  const tx2 = await gate.submitVerdictWithProof({ merkleProof: proof.proof, data });
   await tx2.wait();
   console.log("   tx:", tx2.hash);
 
