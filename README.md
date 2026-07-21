@@ -157,6 +157,24 @@ npm run build && npm run start          # serves on :8300
 Environment: `TEE_VERIFIER_URL` (enclave), `LOCAL_VERIFIER_URL` (fallback),
 `NEXT_PUBLIC_GATE_ADDRESS`, `NEXT_PUBLIC_RPC_URL`.
 
+## FAssets integration path
+
+FAssets v1.3 introduced **direct minting**: a single XRPL payment to the FXRP
+Core Vault, after which an **executor** relays the payment proof to Flare and
+the mint completes. v1.3 also added mint-side controls — executor restrictions,
+hourly/daily caps, delays on large mints, and a governance unblocking path.
+
+AegisFlow slots into that exact architecture as **the executor's compliance
+layer**: before relaying a payment proof, the executor queries
+`AegisFlowGate.isCompliant(keccak256(sourceAddress))`. A sanctioned source
+means the proof is never relayed and the mint never happens — enforced by an
+FDC-proven verdict rather than an operator's promise. Because CLEAR verdicts
+expire after 24 hours, compliance is continuously re-proven as sanctions lists
+evolve.
+
+This makes AegisFlow complementary to the protocol's built-in caps and delays:
+FAssets rate-limits *how much* can be minted; AegisFlow governs *who* may mint.
+
 ## Security model
 
 - **Fail-closed:** any screening uncertainty (API error, missing data) yields

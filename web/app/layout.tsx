@@ -37,6 +37,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               >
                 Dashboard
               </Link>
+              <Link
+                href="/proof"
+                className="text-mutedfg hover:text-fg transition duration-200 px-3 py-2 rounded-lg hover:bg-surface cursor-pointer"
+              >
+                Proof
+              </Link>
               <a
                 href="https://github.com/Bsh54/aegisflow"
                 target="_blank"

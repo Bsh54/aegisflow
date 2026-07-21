@@ -46,4 +46,29 @@ describe("AegisFlowGate", () => {
       .to.emit(gate, "MintAuthorized")
       .withArgs(addrHash, user.address);
   });
+
+  it("expires a Clear verdict after verdictTtl (compliance must be re-proven)", async () => {
+    const { gate, attestor, user } = await deploy();
+    await gate.connect(attestor).submitVerdict(addrHash, Verdict.Clear, evidence);
+    expect(await gate.isCompliant(addrHash)).to.equal(true);
+
+    // advance chain time past the 24h TTL
+    await ethers.provider.send("evm_increaseTime", [24 * 3600 + 60]);
+    await ethers.provider.send("evm_mine", []);
+
+    expect(await gate.isCompliant(addrHash)).to.equal(false);
+    await expect(
+      gate.authorizeMint(addrHash, user.address)
+    ).to.be.revertedWithCustomError(gate, "NotCompliant");
+  });
+
+  it("lets the owner tune verdictTtl", async () => {
+    const { gate, owner, attestor } = await deploy();
+    await gate.connect(owner).setVerdictTtl(3600);
+    expect(await gate.verdictTtl()).to.equal(3600);
+    await gate.connect(attestor).submitVerdict(addrHash, Verdict.Clear, evidence);
+    await ethers.provider.send("evm_increaseTime", [3700]);
+    await ethers.provider.send("evm_mine", []);
+    expect(await gate.isCompliant(addrHash)).to.equal(false);
+  });
 });

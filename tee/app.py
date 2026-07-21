@@ -26,11 +26,18 @@ from pydantic import BaseModel
 
 app = FastAPI(title="AegisFlow AML Verifier", version="0.2.0")
 
-# Official OFAC sanctioned XRP addresses (open mirror of the US Treasury SDN list).
-OFAC_LIST_URL = os.getenv(
-    "OFAC_LIST_URL",
-    "https://raw.githubusercontent.com/0xB10C/ofac-sanctioned-digital-currency-addresses/lists/sanctioned_addresses_XRP.txt",
-)
+# Official OFAC sanctioned XRP addresses (US Treasury SDN list), fetched from
+# two independent distribution channels and cross-checked. If the channels
+# disagree, screening fails closed (REVIEW) instead of trusting either one.
+OFAC_LIST_URLS = [
+    u.strip()
+    for u in os.getenv(
+        "OFAC_LIST_URLS",
+        "https://raw.githubusercontent.com/0xB10C/ofac-sanctioned-digital-currency-addresses/lists/sanctioned_addresses_XRP.txt,"
+        "https://cdn.jsdelivr.net/gh/0xB10C/ofac-sanctioned-digital-currency-addresses@lists/sanctioned_addresses_XRP.txt",
+    ).split(",")
+    if u.strip()
+]
 LIST_TTL = int(os.getenv("LIST_TTL", "3600"))  # refresh the list at most hourly
 
 # Mock mode lets us build the pipeline without any network dependency.
@@ -70,22 +77,38 @@ def _evidence_hash(payload: str) -> str:
     return "0x" + hashlib.sha256(payload.encode()).hexdigest()
 
 
+def _parse_list(text: str) -> set[str]:
+    return {
+        line.strip()
+        for line in text.splitlines()
+        if line.strip() and not line.startswith("#")
+    }
+
+
 async def _load_ofac_list() -> set[str]:
-    """Fetch & cache the OFAC sanctioned XRP address list."""
+    """Fetch the OFAC list from all channels, cross-check, and cache.
+
+    Raises if any channel fails or if channels disagree — callers treat that
+    as REVIEW (fail-closed), never as an automatic allow.
+    """
     now = time.time()
     if _cache["addresses"] and (now - _cache["fetched_at"] < LIST_TTL):
         return _cache["addresses"]
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(OFAC_LIST_URL)
-    resp.raise_for_status()
-    addrs = {
-        line.strip()
-        for line in resp.text.splitlines()
-        if line.strip() and not line.startswith("#")
-    }
-    _cache["addresses"] = addrs
+
+    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+        texts = []
+        for url in OFAC_LIST_URLS:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            texts.append(resp.text)
+
+    lists = [_parse_list(t) for t in texts]
+    if any(l != lists[0] for l in lists[1:]):
+        raise RuntimeError("OFAC list channels disagree — failing closed")
+
+    _cache["addresses"] = lists[0]
     _cache["fetched_at"] = now
-    return addrs
+    return lists[0]
 
 
 async def _screen_address(addr: str) -> tuple[Verdict, str, str]:

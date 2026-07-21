@@ -50,11 +50,17 @@ contract AegisFlowGate {
     /// @notice Base URL the FDC attestation must target: `<base><xrplAddress>`.
     string public attestBaseUrl;
 
+    /// @notice Verdict freshness window. A CLEAR older than this no longer
+    /// authorizes minting: sanctions lists change daily, so compliance is a
+    /// state that must be re-proven, not a permanent badge.
+    uint64 public verdictTtl = 24 hours;
+
     /// @notice keccak256(xrplAddress) => latest screening result.
     mapping(bytes32 => Screening) public screenings;
 
     event AttestorUpdated(address indexed previous, address indexed current);
     event AttestBaseUrlUpdated(string url);
+    event VerdictTtlUpdated(uint64 ttl);
     event Screened(
         bytes32 indexed xrplAddressHash,
         Verdict verdict,
@@ -99,6 +105,12 @@ contract AegisFlowGate {
     function setAttestBaseUrl(string calldata _url) external onlyOwner {
         attestBaseUrl = _url;
         emit AttestBaseUrlUpdated(_url);
+    }
+
+    /// @notice Update the verdict freshness window.
+    function setVerdictTtl(uint64 _ttl) external onlyOwner {
+        verdictTtl = _ttl;
+        emit VerdictTtlUpdated(_ttl);
     }
 
     // ---------------------------------------------------------------------
@@ -169,8 +181,12 @@ contract AegisFlowGate {
     // ---------------------------------------------------------------------
 
     /// @notice Whether a given XRPL address is currently cleared to mint.
+    /// @dev A CLEAR verdict expires after `verdictTtl` and must be re-proven.
     function isCompliant(bytes32 xrplAddressHash) public view returns (bool) {
-        return screenings[xrplAddressHash].verdict == Verdict.Clear;
+        Screening memory s = screenings[xrplAddressHash];
+        return
+            s.verdict == Verdict.Clear &&
+            block.timestamp - s.timestamp <= verdictTtl;
     }
 
     /// @notice Read the full screening record for an address.
@@ -188,8 +204,9 @@ contract AegisFlowGate {
      * @dev In the full system this triggers the FAssets mint for `recipient`.
      */
     function authorizeMint(bytes32 xrplAddressHash, address recipient) external {
-        Verdict v = screenings[xrplAddressHash].verdict;
-        if (v != Verdict.Clear) revert NotCompliant(v);
+        if (!isCompliant(xrplAddressHash)) {
+            revert NotCompliant(screenings[xrplAddressHash].verdict);
+        }
         emit MintAuthorized(xrplAddressHash, recipient);
         // TODO(post-FDC): call the FAssets AssetManager to mint FXRP to `recipient`.
     }
