@@ -8,17 +8,20 @@ async function main() {
   const [deployer] = await ethers.getSigners();
   console.log("Deploying AegisFlowGate with account:", deployer.address);
 
-  // Step 1: the deployer doubles as the TEE attestor. Replace later with the
-  // real TEE operator address (or the FDC verifier in Step 4).
+  // The deployer doubles as the dev attestor; the real path is FDC proofs.
   const attestor = deployer.address;
+  // Deterministic endpoint the FDC Web2Json attestation must target.
+  const attestBaseUrl =
+    process.env.ATTEST_BASE_URL ?? "https://aegisflow.shadrakbessanh.me/attest/";
 
   const Gate = await ethers.getContractFactory("AegisFlowGate");
-  const gate = await Gate.deploy(attestor);
+  const gate = await Gate.deploy(attestor, attestBaseUrl);
   await gate.waitForDeployment();
 
   const address = await gate.getAddress();
   console.log("✅ AegisFlowGate deployed at:", address);
   console.log("   Attestor set to:", attestor);
+  console.log("   Attest base URL:", attestBaseUrl);
 }
 
 main().catch((error) => {

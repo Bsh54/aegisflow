@@ -112,6 +112,17 @@ def health() -> dict:
     return {"status": "ok", "mock_mode": MOCK_MODE, "source": "mock" if MOCK_MODE else "OFAC-SDN-XRP"}
 
 
+@app.get("/attest/{xrpl_address}")
+async def attest(xrpl_address: str) -> dict:
+    """Deterministic endpoint consumed by the FDC (Web2Json attestation).
+
+    ~100 independent FDC data providers each fetch this URL and must obtain the
+    exact same JSON, so the response carries no timestamp or volatile fields.
+    """
+    verdict, _raw, _source = await _screen_address(xrpl_address)
+    return {"address": xrpl_address, "verdict": int(verdict)}
+
+
 @app.post("/screen", response_model=ScreenResponse)
 async def screen(req: ScreenRequest) -> ScreenResponse:
     verdict, raw_evidence, source = await _screen_address(req.xrpl_address)

@@ -5,10 +5,12 @@ import { ethers } from "hardhat";
 const Verdict = { Unknown: 0, Clear: 1, Review: 2, Blocked: 3 };
 
 describe("AegisFlowGate", () => {
+  const ATTEST_BASE = "https://aegisflow.shadrakbessanh.me/attest/";
+
   async function deploy() {
     const [owner, attestor, user] = await ethers.getSigners();
     const Gate = await ethers.getContractFactory("AegisFlowGate");
-    const gate = await Gate.connect(owner).deploy(attestor.address);
+    const gate = await Gate.connect(owner).deploy(attestor.address, ATTEST_BASE);
     await gate.waitForDeployment();
     return { gate, owner, attestor, user };
   }
