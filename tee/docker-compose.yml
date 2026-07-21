@@ -1,0 +1,11 @@
+# For local dev and for Phala Cloud deployment (bring-your-own docker-compose).
+services:
+  aml-verifier:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - MOCK_MODE=${MOCK_MODE:-true}
+      - AML_API_URL=${AML_API_URL:-https://public.chainalysis.com/api/v1/address/}
+      - AML_API_KEY=${AML_API_KEY:-}
+    restart: unless-stopped
