@@ -5,16 +5,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        ink: "#0a0f1e",       // deep navy background
-        panel: "#111830",     // card background
-        edge: "#1e2a4a",      // borders
-        flare: "#e0245e",     // Flare pink accent
-        clear: "#2dd4a7",
-        review: "#f5a623",
-        blocked: "#ff4d5e",
+        deep: "#020203",
+        base: "#0a0a0f",
+        elevated: "#0a0a0c",
+        surface: "rgba(255,255,255,0.05)",
+        edge: "rgba(255,255,255,0.08)",
+        fg: "#EDEDEF",
+        mutedfg: "#8A8F98",
+        flare: "#E0245E",
+        gold: "#F59E0B",
+        clear: "#2DD4A7",
+        review: "#F5A623",
+        blocked: "#FF4D5E",
       },
       fontFamily: {
-        mono: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+        sans: ["'IBM Plex Sans'", "system-ui", "sans-serif"],
+        mono: ["'IBM Plex Mono'", "ui-monospace", "monospace"],
+      },
+      transitionTimingFunction: {
+        swift: "cubic-bezier(0.16, 1, 0.3, 1)",
+      },
+      borderRadius: {
+        card: "16px",
       },
     },
   },

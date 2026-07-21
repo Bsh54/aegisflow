@@ -1,19 +1,79 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-  @apply bg-ink text-slate-200 antialiased;
+  @apply text-fg antialiased;
+  background: linear-gradient(180deg, #0a0a0f 0%, #020203 100%);
+  min-height: 100vh;
+  font-size: 16px;
+}
+
+/* ambient glow blobs (cinematic dark) */
+.ambient::before,
+.ambient::after {
+  content: "";
+  position: fixed;
+  border-radius: 9999px;
+  filter: blur(48px);
+  opacity: 0.1;
+  pointer-events: none;
+  z-index: -1;
+}
+.ambient::before {
+  width: 480px;
+  height: 480px;
+  background: #e0245e;
+  top: -160px;
+  right: -120px;
+  animation: drift 24s ease-in-out infinite alternate;
+}
+.ambient::after {
+  width: 400px;
+  height: 400px;
+  background: #f59e0b;
+  bottom: -140px;
+  left: -120px;
+  animation: drift 30s ease-in-out infinite alternate-reverse;
+}
+@keyframes drift {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-60px, 40px, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ambient::before,
+  .ambient::after {
+    animation: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
 }
 
 .card {
-  @apply bg-panel border border-edge rounded-xl;
+  @apply bg-elevated border border-edge rounded-card;
 }
 
 .btn {
-  @apply bg-flare hover:bg-flare/85 text-white font-semibold rounded-lg px-5 py-2.5 transition disabled:opacity-40 disabled:cursor-not-allowed;
+  @apply inline-flex items-center justify-center gap-2 bg-flare text-white font-semibold rounded-xl px-5 py-3 min-h-[44px] cursor-pointer transition duration-200 ease-swift hover:bg-[#c81e51] hover:-translate-y-px focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-flare disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0;
+}
+
+.btn-ghost {
+  @apply inline-flex items-center justify-center gap-2 border border-edge text-fg font-semibold rounded-xl px-5 py-3 min-h-[44px] cursor-pointer transition duration-200 ease-swift hover:border-white/25 hover:bg-surface focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-flare;
 }
 
 .input {
-  @apply bg-ink border border-edge rounded-lg px-4 py-2.5 w-full font-mono text-sm focus:outline-none focus:border-flare/60;
+  @apply bg-base border border-edge rounded-xl px-4 py-3 w-full font-mono text-sm text-fg placeholder:text-mutedfg/60 transition duration-200 focus:outline-none focus:border-flare/60 focus:ring-[3px] focus:ring-flare/20;
+}
+
+.link {
+  @apply underline underline-offset-2 cursor-pointer transition duration-150 hover:text-fg;
+}
+
+/* skeleton loading */
+.skeleton {
+  @apply bg-surface rounded-lg animate-pulse;
 }

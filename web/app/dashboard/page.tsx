@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { gate, VERDICT_LABELS, EXPLORER, GATE_ADDRESS } from "@/lib/contract";
+import { ExternalLink, ShieldCheck } from "@/components/icons";
 
 interface Row {
   addressHash: string;
@@ -12,9 +13,9 @@ interface Row {
 }
 
 const BADGE: Record<number, string> = {
-  1: "text-clear",
-  2: "text-review",
-  3: "text-blocked",
+  1: "text-clear bg-clear/10 border-clear/30",
+  2: "text-review bg-review/10 border-review/30",
+  3: "text-blocked bg-blocked/10 border-blocked/30",
 };
 
 export default function Dashboard() {
@@ -42,78 +43,99 @@ export default function Dashboard() {
     })();
   }, []);
 
-  const allowed = rows?.filter((r) => r.verdict === 1).length ?? 0;
-  const blocked = rows?.filter((r) => r.verdict === 3).length ?? 0;
-  const fdc = rows?.filter((r) => r.fdcVerified).length ?? 0;
+  const stats = [
+    { label: "cleared", v: rows?.filter((r) => r.verdict === 1).length, cls: "text-clear" },
+    { label: "blocked", v: rows?.filter((r) => r.verdict === 3).length, cls: "text-blocked" },
+    { label: "FDC-verified", v: rows?.filter((r) => r.fdcVerified).length, cls: "text-gold" },
+  ];
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-1">Compliance dashboard</h1>
-      <p className="text-sm text-slate-400 mb-8">
+      <h1 className="text-3xl font-bold mb-2">Compliance dashboard</h1>
+      <p className="text-mutedfg mb-10">
         Live on-chain screening log — read directly from the gate contract on Coston2.
       </p>
 
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="card p-5">
-          <p className="text-3xl font-bold text-clear">{allowed}</p>
-          <p className="text-xs text-slate-400 mt-1">cleared</p>
-        </div>
-        <div className="card p-5">
-          <p className="text-3xl font-bold text-blocked">{blocked}</p>
-          <p className="text-xs text-slate-400 mt-1">blocked</p>
-        </div>
-        <div className="card p-5">
-          <p className="text-3xl font-bold">{fdc}</p>
-          <p className="text-xs text-slate-400 mt-1">FDC-verified</p>
-        </div>
+      <div className="grid grid-cols-3 gap-5 mb-10">
+        {stats.map((s) => (
+          <div key={s.label} className="card p-6">
+            {s.v === undefined ? (
+              <div className="skeleton h-9 w-12 mb-1" />
+            ) : (
+              <p className={`text-3xl font-bold ${s.cls}`}>{s.v}</p>
+            )}
+            <p className="text-xs text-mutedfg mt-1">{s.label}</p>
+          </div>
+        ))}
       </div>
 
-      {error && <div className="card p-5 border-blocked/40 text-blocked text-sm">{error}</div>}
-      {!rows && !error && <p className="text-slate-500 text-sm">Loading on-chain events…</p>}
+      {error && (
+        <div className="card p-6 !border-blocked/40 text-blocked text-sm" role="alert">
+          {error}
+        </div>
+      )}
+
+      {!rows && !error && (
+        <div className="card p-6 space-y-3">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="skeleton h-10 w-full" />
+          ))}
+        </div>
+      )}
 
       {rows && (
         <div className="card overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[720px]">
             <thead>
-              <tr className="text-left text-xs text-slate-500 border-b border-edge">
-                <th className="p-4">ADDRESS HASH</th>
-                <th className="p-4">VERDICT</th>
-                <th className="p-4">PROOF</th>
-                <th className="p-4">TIME</th>
-                <th className="p-4">TX</th>
+              <tr className="text-left text-xs text-mutedfg border-b border-edge">
+                <th className="p-4 font-medium tracking-widest">ADDRESS HASH</th>
+                <th className="p-4 font-medium tracking-widest">VERDICT</th>
+                <th className="p-4 font-medium tracking-widest">PROOF</th>
+                <th className="p-4 font-medium tracking-widest">TIME</th>
+                <th className="p-4 font-medium tracking-widest">TX</th>
               </tr>
             </thead>
             <tbody className="font-mono text-xs">
               {rows.map((r, i) => (
-                <tr key={i} className="border-b border-edge/50">
-                  <td className="p-4 text-slate-400">{r.addressHash.slice(0, 18)}…</td>
-                  <td className={`p-4 font-bold ${BADGE[r.verdict] ?? ""}`}>
-                    {VERDICT_LABELS[r.verdict]}
+                <tr
+                  key={i}
+                  className="border-b border-edge/50 last:border-0 transition duration-150 hover:bg-surface"
+                >
+                  <td className="p-4 text-mutedfg">{r.addressHash.slice(0, 18)}…</td>
+                  <td className="p-4">
+                    <span
+                      className={`inline-block border rounded-lg px-2.5 py-1 font-bold ${BADGE[r.verdict] ?? ""}`}
+                    >
+                      {VERDICT_LABELS[r.verdict]}
+                    </span>
                   </td>
                   <td className="p-4">
                     {r.fdcVerified ? (
-                      <span className="text-clear">FDC ✓</span>
+                      <span className="inline-flex items-center gap-1.5 text-clear">
+                        <ShieldCheck className="w-4 h-4" /> FDC
+                      </span>
                     ) : (
-                      <span className="text-slate-500">attestor</span>
+                      <span className="text-mutedfg">attestor</span>
                     )}
                   </td>
-                  <td className="p-4 text-slate-400">
+                  <td className="p-4 text-mutedfg whitespace-nowrap">
                     {new Date(r.timestamp * 1000).toLocaleString()}
                   </td>
                   <td className="p-4">
                     <a
-                      className="underline text-slate-400 hover:text-slate-200"
+                      className="link text-mutedfg inline-flex items-center gap-1"
                       target="_blank"
                       href={`${EXPLORER}/tx/${r.tx}`}
                     >
-                      {r.tx.slice(0, 12)}… ↗
+                      {r.tx.slice(0, 12)}…
+                      <ExternalLink className="w-3.5 h-3.5" />
                     </a>
                   </td>
                 </tr>
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td className="p-4 text-slate-500" colSpan={5}>
+                  <td className="p-4 text-mutedfg" colSpan={5}>
                     No screenings yet.
                   </td>
                 </tr>
@@ -123,10 +145,10 @@ export default function Dashboard() {
         </div>
       )}
 
-      <p className="text-xs text-slate-500 mt-4 font-mono">
+      <p className="text-xs text-mutedfg mt-5 font-mono">
         contract:{" "}
-        <a className="underline" target="_blank" href={`${EXPLORER}/address/${GATE_ADDRESS}`}>
-          {GATE_ADDRESS} ↗
+        <a className="link" target="_blank" href={`${EXPLORER}/address/${GATE_ADDRESS}`}>
+          {GATE_ADDRESS}
         </a>
       </p>
     </div>

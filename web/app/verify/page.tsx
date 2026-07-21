@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { gate, addressHash, VERDICT_LABELS, EXPLORER, GATE_ADDRESS } from "@/lib/contract";
+import { Check, AlertTriangle, XCircle, Lock, Loader, ExternalLink } from "@/components/icons";
 
 type Step = "idle" | "screening" | "onchain" | "done" | "error";
 
@@ -18,20 +19,26 @@ interface OnChain {
   timestamp: number;
 }
 
-const STYLE: Record<number, { badge: string; label: string; note: string }> = {
+const STYLE: Record<
+  number,
+  { badge: string; label: string; icon: React.ReactNode; note: string }
+> = {
   1: {
-    badge: "bg-clear/15 text-clear border-clear/40",
-    label: "✅ CLEAR",
+    badge: "bg-clear/10 text-clear border-clear/40",
+    label: "CLEAR",
+    icon: <Check className="w-5 h-5" />,
     note: "Not sanctioned — FXRP mint would be authorized.",
   },
   2: {
-    badge: "bg-review/15 text-review border-review/40",
-    label: "⚠️ REVIEW",
+    badge: "bg-review/10 text-review border-review/40",
+    label: "REVIEW",
+    icon: <AlertTriangle className="w-5 h-5" />,
     note: "Uncertain result — held for manual review (fail-closed).",
   },
   3: {
-    badge: "bg-blocked/15 text-blocked border-blocked/40",
-    label: "⛔ BLOCKED",
+    badge: "bg-blocked/10 text-blocked border-blocked/40",
+    label: "BLOCKED",
+    icon: <XCircle className="w-5 h-5" />,
     note: "OFAC SDN match — FXRP mint denied.",
   },
 };
@@ -46,7 +53,10 @@ export default function Verify() {
   const [step, setStep] = useState<Step>("idle");
   const [result, setResult] = useState<ScreenResult | null>(null);
   const [onchain, setOnchain] = useState<OnChain | null>(null);
+  const [verifierSource, setVerifierSource] = useState("");
   const [error, setError] = useState("");
+
+  const busy = step === "screening" || step === "onchain";
 
   async function run() {
     setStep("screening");
@@ -59,7 +69,8 @@ export default function Verify() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ xrpl_address: addr.trim() }),
       });
-      if (!res.ok) throw new Error(`verifier HTTP ${res.status}`);
+      if (!res.ok) throw new Error(`Verifier unavailable (HTTP ${res.status})`);
+      setVerifierSource(res.headers.get("x-aegis-verifier") ?? "");
       const data: ScreenResult = await res.json();
       setResult(data);
 
@@ -68,7 +79,7 @@ export default function Verify() {
         const [v, ts, , fdcVerified] = await gate().getScreening(addressHash(addr.trim()));
         setOnchain({ verdict: Number(v), fdcVerified, timestamp: Number(ts) });
       } catch {
-        /* on-chain record may not exist yet — screening result still stands */
+        /* no on-chain record yet — screening result still stands */
       }
       setStep("done");
     } catch (e: any) {
@@ -81,32 +92,35 @@ export default function Verify() {
 
   return (
     <div className="max-w-2xl mx-auto">
-      <h1 className="text-2xl font-bold mb-1">Compliance verification</h1>
-      <p className="text-sm text-slate-400 mb-8">
-        Screen an XRPL address against the official OFAC sanctions list —
-        confidentially.
+      <h1 className="text-3xl font-bold mb-2">Compliance verification</h1>
+      <p className="text-mutedfg mb-10">
+        Screen an XRPL address against the official OFAC sanctions list — confidentially.
       </p>
 
-      <div className="card p-6">
-        <label className="text-xs text-slate-400 font-mono">XRPL ADDRESS</label>
-        <div className="flex gap-3 mt-2">
+      <div className="card p-7">
+        <label htmlFor="xrpl" className="text-xs text-mutedfg font-mono tracking-widest">
+          XRPL ADDRESS
+        </label>
+        <div className="flex flex-col sm:flex-row gap-3 mt-3">
           <input
+            id="xrpl"
             className="input"
-            placeholder="r..."
+            placeholder="r…"
             value={addr}
             onChange={(e) => setAddr(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && addr && run()}
+            onKeyDown={(e) => e.key === "Enter" && addr && !busy && run()}
           />
-          <button className="btn" onClick={run} disabled={!addr || step === "screening" || step === "onchain"}>
-            Verify
+          <button className="btn shrink-0" onClick={run} disabled={!addr || busy}>
+            {busy ? <Loader className="w-4 h-4" /> : null}
+            {busy ? "Verifying…" : "Verify"}
           </button>
         </div>
-        <div className="flex gap-3 mt-3 text-xs text-slate-500">
-          try:
+        <div className="flex flex-wrap items-center gap-3 mt-4 text-xs text-mutedfg">
+          <span>try:</span>
           {SAMPLES.map((sample) => (
             <button
               key={sample.value}
-              className="underline hover:text-slate-300 transition"
+              className="link"
               onClick={() => setAddr(sample.value)}
             >
               {sample.label}
@@ -115,53 +129,109 @@ export default function Verify() {
         </div>
       </div>
 
-      {step !== "idle" && (
-        <div className="card p-6 mt-5 font-mono text-sm space-y-2">
-          <p className={step === "screening" ? "text-white" : "text-slate-500"}>
-            {step === "screening" ? "◌" : "✔"} 🔒 Confidential screening (OFAC SDN)…
-          </p>
-          <p className={step === "onchain" ? "text-white" : step === "done" ? "text-slate-500" : "text-slate-700"}>
-            {step === "onchain" ? "◌" : step === "done" ? "✔" : "·"} ⛓️ Reading gate contract on Coston2…
-          </p>
+      {step !== "idle" && step !== "error" && (
+        <div className="card p-7 mt-5 font-mono text-sm space-y-3" aria-live="polite">
+          <StepRow
+            active={step === "screening"}
+            done={step !== "screening"}
+            icon={<Lock className="w-4 h-4" />}
+            label="Confidential screening (OFAC SDN, sealed in enclave)…"
+          />
+          <StepRow
+            active={step === "onchain"}
+            done={step === "done"}
+            pending={step === "screening"}
+            icon={<ExternalLink className="w-4 h-4" />}
+            label="Reading gate contract on Coston2…"
+          />
         </div>
       )}
 
       {step === "error" && (
-        <div className="card p-6 mt-5 border-blocked/40 text-blocked text-sm">{error}</div>
+        <div className="card p-6 mt-5 !border-blocked/40 text-blocked text-sm" role="alert">
+          {error}
+        </div>
       )}
 
       {result && s && step === "done" && (
-        <div className="card p-6 mt-5">
-          <div className={`inline-block border rounded-lg px-4 py-2 font-bold ${s.badge}`}>
+        <div className="card p-7 mt-5">
+          <div
+            className={`inline-flex items-center gap-2.5 border rounded-xl px-5 py-3 font-bold text-lg ${s.badge}`}
+          >
+            {s.icon}
             {s.label}
           </div>
-          <p className="text-sm text-slate-300 mt-3">{s.note}</p>
-          <div className="mt-5 text-xs font-mono text-slate-500 space-y-1">
-            <p>source: {result.source}</p>
-            <p>evidence (sealed): {result.evidence_hash.slice(0, 34)}…</p>
-            {onchain && onchain.verdict !== 0 && (
-              <p>
-                on-chain: {VERDICT_LABELS[onchain.verdict]}{" "}
-                {onchain.fdcVerified ? (
-                  <span className="text-clear">· FDC-verified ✓</span>
-                ) : (
-                  "· attestor"
+          <p className="text-mutedfg mt-4">{s.note}</p>
+          <dl className="mt-6 text-xs font-mono text-mutedfg space-y-2">
+            <div className="flex gap-3">
+              <dt className="w-32 shrink-0">source</dt>
+              <dd className="text-fg">
+                {result.source}
+                {verifierSource && (
+                  <span className="ml-2 text-mutedfg">
+                    · served by {verifierSource === "tee" ? "TDX enclave" : "standby node"}
+                  </span>
                 )}
-              </p>
+              </dd>
+            </div>
+            <div className="flex gap-3">
+              <dt className="w-32 shrink-0">evidence (sealed)</dt>
+              <dd className="text-fg break-all">{result.evidence_hash.slice(0, 34)}…</dd>
+            </div>
+            {onchain && onchain.verdict !== 0 && (
+              <div className="flex gap-3">
+                <dt className="w-32 shrink-0">on-chain</dt>
+                <dd className="text-fg">
+                  {VERDICT_LABELS[onchain.verdict]}
+                  {onchain.fdcVerified ? (
+                    <span className="text-clear ml-2">FDC-verified ✓</span>
+                  ) : (
+                    <span className="ml-2">attestor</span>
+                  )}
+                </dd>
+              </div>
             )}
-            <p>
-              gate:{" "}
-              <a
-                className="underline hover:text-slate-300"
-                target="_blank"
-                href={`${EXPLORER}/address/${GATE_ADDRESS}`}
-              >
-                {GATE_ADDRESS.slice(0, 10)}… ↗
-              </a>
-            </p>
-          </div>
+            <div className="flex gap-3">
+              <dt className="w-32 shrink-0">gate</dt>
+              <dd>
+                <a
+                  className="link text-fg inline-flex items-center gap-1.5"
+                  target="_blank"
+                  href={`${EXPLORER}/address/${GATE_ADDRESS}`}
+                >
+                  {GATE_ADDRESS.slice(0, 10)}…{GATE_ADDRESS.slice(-6)}
+                  <ExternalLink />
+                </a>
+              </dd>
+            </div>
+          </dl>
         </div>
       )}
     </div>
+  );
+}
+
+function StepRow({
+  active,
+  done,
+  pending,
+  icon,
+  label,
+}: {
+  active?: boolean;
+  done?: boolean;
+  pending?: boolean;
+  icon: React.ReactNode;
+  label: string;
+}) {
+  return (
+    <p
+      className={`flex items-center gap-3 ${
+        active ? "text-fg" : done ? "text-mutedfg" : "text-mutedfg/40"
+      }`}
+    >
+      {active ? <Loader className="w-4 h-4" /> : done && !pending ? <Check className="w-4 h-4 text-clear" /> : icon}
+      {label}
+    </p>
   );
 }
