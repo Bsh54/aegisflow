@@ -33,9 +33,6 @@ export default function Home() {
       {/* 1. Hero + live status */}
       <section className="grid lg:grid-cols-[1.2fr,1fr] gap-10 items-center py-10 lg:py-16">
         <div>
-          <p className="text-flare font-mono text-xs tracking-widest mb-5">
-            CONFIDENTIAL COMPLIANCE FIREWALL · FLARE
-          </p>
           <h1 className="text-4xl md:text-[3.4rem] font-bold leading-[1.08] mb-6">
             Use your XRP on Flare.
             <br />

@@ -1,99 +1,181 @@
-# 🛡️ AegisFlow
+# AegisFlow
 
 **Confidential AML compliance firewall for FXRP inflows on Flare.**
 
-AegisFlow is a privacy-preserving compliance gate that lets institutions accept
-FXRP without breaking AML/sanctions law — and **without** exposing their clients'
-transaction graph on the public ledger.
+AegisFlow is a privacy-preserving compliance gate for institutions entering the
+Flare ecosystem: every source XRPL address is screened against the official
+OFAC SDN sanctions list before FXRP can be minted — the screening runs inside a
+confidential enclave, and the verdict is proven on-chain by the Flare Data
+Connector, so no single party (including the operator) can forge a result.
 
-Built for the **Flare Summer Signal** hackathon (Bounty 2 — Confidential Compute).
+Built for the **Flare Summer Signal** hackathon — Bounty 2, Confidential Compute.
+
+**Live demo:** https://aegisflow.shadrakbessanh.me
 
 ---
 
-## The problem
+## Problem
 
-Banks and funds want to use their idle XRP on Flare, but face two blockers:
+Institutions holding XRP face two blockers preventing them from using Flare DeFi:
 
-1. **Legal**: they are legally forbidden from touching funds linked to sanctioned
-   or criminal addresses.
-2. **Privacy**: everything on a public blockchain is visible — running compliance
-   checks in the open would expose their clients, amounts, and screening logic.
+1. **Legal** — AML/sanctions regulations forbid them from touching funds linked
+   to sanctioned addresses. One mistake means fines or criminal liability.
+2. **Privacy** — public blockchains expose everything. Running compliance
+   checks in the open reveals clients, amounts, and screening logic to
+   competitors and front-runners.
 
-Result: institutions stay out. AegisFlow removes that blocker.
+AegisFlow removes both blockers at once: institutional-grade screening,
+sealed inside trusted hardware, enforced trustlessly on-chain.
 
-## How it works
+## Architecture
 
 ```
-[ Web app ]──►[ TEE verifier ]──►[ FDC (~100 providers) ]──►[ Gate contract ]
- (React)      real OFAC SDN        Web2Json attestation      allow / deny mint
-              screening            Merkle-proof consensus    (Coston2)
+┌────────────┐    ┌──────────────────┐    ┌──────────────────┐    ┌───────────────┐
+│  Web app   │───►│  TEE verifier     │───►│  Flare Data       │───►│  Gate contract │
+│  (Next.js) │    │  (Intel TDX /     │    │  Connector (FDC)  │    │  (Coston2)     │
+│            │    │   Phala dstack)   │    │  ~100 providers   │    │                │
+└────────────┘    └──────────────────┘    └──────────────────┘    └───────────────┘
+   UI + proxy       OFAC SDN screening      Web2Json attestation     verifies proof,
+   w/ failover      sealed in enclave       Merkle consensus         gates FXRP mint
 ```
 
-1. A user requests to mint FXRP from an XRPL address.
-2. The **verifier** (TEE service) screens the address against the **official
-   OFAC SDN sanctions list** (real data, fail-closed) and exposes a
-   deterministic `/attest/<address>` endpoint returning only the verdict.
-3. The **FDC** (Flare Data Connector): ~100 independent data providers each
-   fetch that endpoint, reach consensus, and produce a **Merkle proof** — no
-   single party (not even us) can forge a verdict.
-4. The **AegisFlowGate** contract verifies the FDC proof on-chain
-   (`verifyWeb2Json`), pins the attested URL to our verifier, stores the
-   verdict, and allows or blocks the FXRP mint accordingly.
+**Data flow for one verification:**
 
-### Verdicts
+1. A user (or institution back-office) submits an XRPL address.
+2. The **verifier** — a FastAPI service running inside a Phala Cloud
+   confidential VM (Intel TDX, dstack) — screens it against the official OFAC
+   SDN digital-currency list (refreshed hourly, fail-closed on any error) and
+   exposes a deterministic `GET /attest/<address>` endpoint returning only
+   `{address, verdict}`. Raw evidence never leaves the enclave.
+3. An **FDC Web2Json attestation** is requested: ~100 independent Flare data
+   providers each fetch the endpoint, reach consensus, and the round produces a
+   Merkle proof retrievable from the DA layer.
+4. **`AegisFlowGate`** (Solidity) verifies the proof via
+   `ContractRegistry.getFdcVerification().verifyWeb2Json`, checks the attested
+   URL is pinned to the AegisFlow verifier, decodes the verdict, and records it.
+   `authorizeMint` then allows or denies the FXRP mint accordingly.
 
-| Code | Label   | Meaning                          |
-|------|---------|----------------------------------|
-| 1    | CLEAR   | not sanctioned — mint allowed    |
-| 2    | REVIEW  | uncertainty — fail-closed, held  |
-| 3    | BLOCKED | OFAC SDN match — mint denied     |
+**Verdicts:** `1 CLEAR` (mint allowed) · `2 REVIEW` (fail-closed hold) ·
+`3 BLOCKED` (OFAC match, denied).
 
-## Live deployment
+**High availability:** the web app proxies verifier endpoints TEE-first with
+automatic failover to a standby node (same code, same dataset), so the service
+stays up even when the enclave is powered down between demo windows.
 
-| Piece | Where |
-|-------|-------|
-| Verifier API | https://aegisflow.shadrakbessanh.me (`/health`, `/screen`, `/attest/<addr>`) |
-| Gate contract (Coston2) | `0x7d7F06AFd4C178b07E4cE69085d6f79721Cca797` |
-| Sanctions data | Official OFAC SDN digital-currency list (XRP), refreshed hourly |
+## Deployed components
 
-## Tech stack
-
-| Layer | Tech |
-|-------|------|
-| Gate contract | Solidity 0.8.25 + Flare periphery (`ContractRegistry`, `IWeb2Json`) |
-| Attestation | FDC Web2Json on Coston2 (verifier + FdcHub + DA layer) |
-| Verifier | Python FastAPI, Docker-ready for Phala TEE (dstack) |
-| Connector | Node.js + ethers v6 |
-| Frontend | Next.js + wagmi (in progress) |
+| Component | Location |
+|---|---|
+| Web app + API proxy | https://aegisflow.shadrakbessanh.me |
+| Gate contract (Coston2) | [`0x7d7F06AFd4C178b07E4cE69085d6f79721Cca797`](https://coston2-explorer.flare.network/address/0x7d7F06AFd4C178b07E4cE69085d6f79721Cca797) |
+| TEE verifier | Phala Cloud CVM (Intel TDX, dstack) — bootstraps `tee/app.py` from this repo |
+| Sanctions data | Official OFAC SDN digital-currency address list (XRP) |
 
 ## Repository layout
 
 ```
 aegisflow/
-├── contracts/   # AegisFlowGate + Hardhat, tests, deploy & FDC attestation scripts
-├── tee/         # AML verifier (FastAPI) + Dockerfile for Phala confidential VM
-├── connector/   # verifier -> on-chain glue (dev/attestor path)
-└── web/         # Next.js frontend
+├── contracts/           # Solidity + Hardhat
+│   ├── contracts/AegisFlowGate.sol    # compliance gate w/ FDC proof verification
+│   ├── scripts/deploy.ts              # Coston2 deployment
+│   ├── scripts/fdcAttest.ts           # full FDC attestation pipeline
+│   └── test/                          # unit tests
+├── tee/                 # confidential verifier
+│   ├── app.py                         # FastAPI service (OFAC screening)
+│   ├── Dockerfile / docker-compose.yml
+│   └── phala-compose.yml              # Phala CVM deployment (code from GitHub)
+├── connector/           # Node/ethers glue (dev path: verifier → contract)
+└── web/                 # Next.js 14 app
+    ├── app/                           # landing, /verify, /dashboard + API proxy routes
+    ├── components/                    # icons (SVG), live status/metrics
+    ├── lib/                           # contract bindings, TEE-failover proxy
+    └── DESIGN.md                      # design system specification
 ```
 
-## Running the FDC attestation
+## Running it yourself
+
+### Prerequisites
+
+- Node.js ≥ 20, Python ≥ 3.12
+- A funded Coston2 test wallet ([faucet](https://faucet.flare.network/coston2))
+
+### 1. Contracts
 
 ```bash
 cd contracts
-GATE_ADDRESS=0x7d7F06AFd4C178b07E4cE69085d6f79721Cca797 \
-XRPL_ADDRESS=<address-to-screen> \
+npm install
+cp .env.example .env          # set PRIVATE_KEY (test wallet only)
+npx hardhat test              # 4 unit tests
+npx hardhat run scripts/deploy.ts --network coston2
+```
+
+### 2. Verifier
+
+```bash
+cd tee
+python -m venv .venv && .venv/bin/pip install -r requirements.txt
+MOCK_MODE=false .venv/bin/uvicorn app:app --host 0.0.0.0 --port 8200
+# or: docker compose up --build
+```
+
+Endpoints: `GET /health` · `POST /screen {"xrpl_address": "r..."}` ·
+`GET /attest/<address>` (deterministic, consumed by the FDC).
+
+### 3. FDC attestation (trustless verdict)
+
+```bash
+cd contracts
+GATE_ADDRESS=0x... XRPL_ADDRESS=r... \
 npx hardhat run scripts/fdcAttest.ts --network coston2
 ```
 
-## Build roadmap
+The script prepares the Web2Json request on the testnet verifier, pays and
+submits it to `FdcHub`, waits for round finalization, fetches the Merkle proof
+from the DA layer, and submits it to the gate. `REUSE_ROUND_ID=<id>` skips
+payment/wait for an already-finalized round.
 
-- [x] Gate contract on Coston2 + tests
-- [x] Real OFAC sanctions screening (mock removed)
-- [x] Public verifier deployment (cloudflared)
-- [x] Trustless FDC Web2Json verdict path
-- [ ] Verifier inside Phala TEE (confidential compute) + remote attestation
-- [ ] Web UI (verify / dashboard / proof screens)
-- [ ] FAssets AssetManager integration for the actual FXRP mint
+### 4. TEE deployment (Phala Cloud)
+
+```bash
+npx phala auth login <api-token>
+npx phala deploy --name aegisflow --compose ./tee/phala-compose.yml \
+  --instance-type tdx.small --wait
+npx phala cvms attestation <cvm-id>     # remote attestation certificate chain
+```
+
+The CVM pulls `tee/app.py` directly from this public repository at boot — what
+runs inside the enclave is exactly what you can audit here.
+
+### 5. Web app
+
+```bash
+cd web
+npm install
+npm run build && npm run start          # serves on :8300
+```
+
+Environment: `TEE_VERIFIER_URL` (enclave), `LOCAL_VERIFIER_URL` (fallback),
+`NEXT_PUBLIC_GATE_ADDRESS`, `NEXT_PUBLIC_RPC_URL`.
+
+## Security model
+
+- **Fail-closed:** any screening uncertainty (API error, missing data) yields
+  `REVIEW`, never an automatic allow.
+- **URL pinning:** the gate rejects FDC proofs whose attested URL differs from
+  `attestBaseUrl + address` — proofs for other APIs cannot be replayed.
+- **Determinism:** `/attest` carries no timestamps or volatile fields, so ~100
+  independent FDC providers converge on identical responses.
+- **Enclave privacy:** only the verdict and an evidence hash leave the TEE;
+  the transaction graph and screening details stay sealed.
+- **No trusted operator:** with the FDC path, verdicts are accepted only with
+  a valid Merkle consensus proof; the legacy attestor path exists for local
+  development and is flagged on-chain (`fdcVerified=false`).
+
+## Tech stack
+
+Solidity 0.8.25 · `@flarenetwork/flare-periphery-contracts` · Hardhat ·
+ethers v6 · FastAPI · Phala Cloud (dstack, Intel TDX) · Next.js 14 ·
+Tailwind CSS · Flare Coston2 (FDC Web2Json, FdcHub, DA layer)
 
 ## License
 
