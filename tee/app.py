@@ -1,12 +1,15 @@
 """
 AegisFlow — Confidential AML verifier.
 
-This service runs inside a TEE (Phala confidential VM). It receives an XRPL
-address, screens it against an AML / sanctions API, and returns a *verdict*
-only — the raw screening data never leaves the enclave.
+Runs inside a TEE (Phala confidential VM). Receives an XRPL address, screens it
+against the official OFAC sanctions list, and returns a *verdict* only — the raw
+screening data never leaves the enclave.
+
+Data source (real mode): the official OFAC SDN "Digital Currency Address" list
+for XRP, published in the open (no API key needed). Set MOCK_MODE=false to use it.
 
 Roadmap:
-  Step 2: runs here in the clear, calling a real (or mocked) AML API.
+  Step 2: runs here in the clear, screening against the real OFAC list.
   Step 3: same code, packaged into the Phala TEE via the Dockerfile.
   Step 4: the signed verdict is submitted on-chain through the FDC.
 """
@@ -21,23 +24,22 @@ import httpx
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-app = FastAPI(title="AegisFlow AML Verifier", version="0.1.0")
+app = FastAPI(title="AegisFlow AML Verifier", version="0.2.0")
 
-# AML provider endpoint. Defaults to a public sanctions screening API.
-# Chainalysis offers a free sanctions screening API; TRM offers one too.
-AML_API_URL = os.getenv(
-    "AML_API_URL",
-    "https://public.chainalysis.com/api/v1/address/",
+# Official OFAC sanctioned XRP addresses (open mirror of the US Treasury SDN list).
+OFAC_LIST_URL = os.getenv(
+    "OFAC_LIST_URL",
+    "https://raw.githubusercontent.com/0xB10C/ofac-sanctioned-digital-currency-addresses/lists/sanctioned_addresses_XRP.txt",
 )
-AML_API_KEY = os.getenv("AML_API_KEY", "")
+LIST_TTL = int(os.getenv("LIST_TTL", "3600"))  # refresh the list at most hourly
 
-# Mock mode lets us build the whole pipeline before wiring a real API key.
+# Mock mode lets us build the pipeline without any network dependency.
 MOCK_MODE = os.getenv("MOCK_MODE", "true").lower() == "true"
 
-# A tiny hardcoded blacklist for local/demo testing in mock mode.
-MOCK_BLACKLIST = {
-    "rSanctionedBadActorExample1111111111",
-}
+MOCK_BLACKLIST = {"rSanctionedBadActorExample1111111111"}
+
+# in-memory cache of the sanctions list
+_cache: dict = {"addresses": set(), "fetched_at": 0.0}
 
 
 class Verdict(IntEnum):
@@ -56,55 +58,68 @@ class ScreenResponse(BaseModel):
     verdict: int
     verdict_label: str
     evidence_hash: str
+    source: str
     timestamp: int
 
 
 def _address_hash(addr: str) -> str:
-    """keccak-like id used on-chain. Uses keccak256 to match Solidity."""
-    # NOTE: Solidity keccak256(bytes). We use sha3_256 stand-in here; swap to
-    # a real keccak lib (pysha3 / eth-utils) before wiring to the contract.
     return "0x" + hashlib.sha3_256(addr.encode()).hexdigest()
 
 
 def _evidence_hash(payload: str) -> str:
-    """Hash of the sealed audit report kept private inside the enclave."""
     return "0x" + hashlib.sha256(payload.encode()).hexdigest()
 
 
-async def _screen_address(addr: str) -> tuple[Verdict, str]:
-    """Return (verdict, raw_evidence). Raw evidence never leaves the enclave."""
-    if MOCK_MODE:
-        if addr in MOCK_BLACKLIST:
-            return Verdict.BLOCKED, f"mock: {addr} on sanctions list"
-        return Verdict.CLEAR, f"mock: {addr} not found on any sanctions list"
-
-    headers = {"X-API-Key": AML_API_KEY} if AML_API_KEY else {}
+async def _load_ofac_list() -> set[str]:
+    """Fetch & cache the OFAC sanctioned XRP address list."""
+    now = time.time()
+    if _cache["addresses"] and (now - _cache["fetched_at"] < LIST_TTL):
+        return _cache["addresses"]
     async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.get(f"{AML_API_URL}{addr}", headers=headers)
+        resp = await client.get(OFAC_LIST_URL)
+    resp.raise_for_status()
+    addrs = {
+        line.strip()
+        for line in resp.text.splitlines()
+        if line.strip() and not line.startswith("#")
+    }
+    _cache["addresses"] = addrs
+    _cache["fetched_at"] = now
+    return addrs
 
-    # fail-closed: any uncertainty => block rather than risk letting bad funds in.
-    if resp.status_code != 200:
-        return Verdict.REVIEW, f"aml api status {resp.status_code}"
 
-    data = resp.json()
-    identifications = data.get("identifications", [])
-    if identifications:
-        return Verdict.BLOCKED, f"sanctioned: {identifications}"
-    return Verdict.CLEAR, "no sanctions match"
+async def _screen_address(addr: str) -> tuple[Verdict, str, str]:
+    """Return (verdict, raw_evidence, source). Raw evidence stays in the enclave."""
+    if MOCK_MODE:
+        source = "mock"
+        if addr in MOCK_BLACKLIST:
+            return Verdict.BLOCKED, f"mock: {addr} on sanctions list", source
+        return Verdict.CLEAR, f"mock: {addr} not sanctioned", source
+
+    source = "OFAC-SDN-XRP"
+    try:
+        sanctioned = await _load_ofac_list()
+    except Exception as e:  # fail-closed: uncertainty => require review, never auto-allow
+        return Verdict.REVIEW, f"ofac list fetch failed: {e}", source
+
+    if addr in sanctioned:
+        return Verdict.BLOCKED, f"OFAC SDN match for {addr}", source
+    return Verdict.CLEAR, f"{addr} not on OFAC SDN (list size {len(sanctioned)})", source
 
 
 @app.get("/health")
 def health() -> dict:
-    return {"status": "ok", "mock_mode": MOCK_MODE}
+    return {"status": "ok", "mock_mode": MOCK_MODE, "source": "mock" if MOCK_MODE else "OFAC-SDN-XRP"}
 
 
 @app.post("/screen", response_model=ScreenResponse)
 async def screen(req: ScreenRequest) -> ScreenResponse:
-    verdict, raw_evidence = await _screen_address(req.xrpl_address)
+    verdict, raw_evidence, source = await _screen_address(req.xrpl_address)
     return ScreenResponse(
         xrpl_address_hash=_address_hash(req.xrpl_address),
         verdict=int(verdict),
         verdict_label=verdict.name,
         evidence_hash=_evidence_hash(raw_evidence),  # only the hash is public
+        source=source,
         timestamp=int(time.time()),
     )
