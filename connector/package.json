@@ -1,0 +1,14 @@
+{
+  "name": "aegisflow-connector",
+  "version": "0.1.0",
+  "description": "Glue between the AegisFlow verifier and the on-chain gate contract",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "screen": "node index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.0",
+    "ethers": "^6.13.0"
+  }
+}
