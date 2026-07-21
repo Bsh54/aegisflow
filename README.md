@@ -67,7 +67,7 @@ stays up even when the enclave is powered down between demo windows.
 | Component | Location |
 |---|---|
 | Web app + API proxy | https://aegisflow.shadrakbessanh.me |
-| Gate contract (Coston2) | [`0x7d7F06AFd4C178b07E4cE69085d6f79721Cca797`](https://coston2-explorer.flare.network/address/0x7d7F06AFd4C178b07E4cE69085d6f79721Cca797) |
+| Gate contract (Coston2) | [`0x0C27183591F69fF97Cc6dD1c019D2388352D69CA`](https://coston2-explorer.flare.network/address/0x0C27183591F69fF97Cc6dD1c019D2388352D69CA) |
 | TEE verifier | Phala Cloud CVM (Intel TDX, dstack) — bootstraps `tee/app.py` from this repo |
 | Sanctions data | Official OFAC SDN digital-currency address list (XRP) |
 

@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 
 export const GATE_ADDRESS =
   process.env.NEXT_PUBLIC_GATE_ADDRESS ??
-  "0x7d7F06AFd4C178b07E4cE69085d6f79721Cca797";
+  "0x0C27183591F69fF97Cc6dD1c019D2388352D69CA";
 
 export const RPC_URL =
   process.env.NEXT_PUBLIC_RPC_URL ??
