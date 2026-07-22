@@ -69,6 +69,8 @@ stays up even when the enclave is powered down between demo windows.
 |---|---|
 | Web app + API proxy | https://aegisflow.shadrakbessanh.me |
 | Gate contract (Coston2) | [`0x0C27183591F69fF97Cc6dD1c019D2388352D69CA`](https://coston2-explorer.flare.network/address/0x0C27183591F69fF97Cc6dD1c019D2388352D69CA) |
+| Compliant FXRP gateway (real FXRP) | `0x84DA55ef31a7a6ceFFDaB9A226cd2c2D1bA6FE73` |
+| ERC-3643 compliance module | `0x838d5DE18e315bE7111420bDAa090a2260673e8c` |
 | TEE verifier | Phala Cloud CVM (Intel TDX, dstack) — bootstraps `tee/app.py` from this repo |
 | Threat data | OFAC SDN (XRP), FBI Lazarus, Israel NBCTF, Ransomwhere — all public, hourly refresh |
 

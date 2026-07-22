@@ -18,11 +18,12 @@ export const GATE_ABI = [
 
 export const GATEWAY_ADDRESS =
   process.env.NEXT_PUBLIC_GATEWAY_ADDRESS ??
-  "0xDe4C6a704552CF56465f2A020780Cc4E0E46bcAA";
+  "0x84DA55ef31a7a6ceFFDaB9A226cd2c2D1bA6FE73";
 
+// Real FAssets FXRP token on Coston2 (via the FXRP AssetManager).
 export const FXRP_ADDRESS =
   process.env.NEXT_PUBLIC_FXRP_ADDRESS ??
-  "0x4540E3c8EFCC673ED2F501ca9b990CaFe99B8b9b";
+  "0x0b6A3645c240605887a5532109323A3E12273dc7";
 
 export const MODULE_ADDRESS =
   process.env.NEXT_PUBLIC_MODULE_ADDRESS ??
