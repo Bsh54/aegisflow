@@ -1,5 +1,6 @@
-import { ShieldCheck, Lock, Link2, ExternalLink } from "@/components/icons";
+import { ShieldCheck, Lock, Link2, ExternalLink, AlertTriangle } from "@/components/icons";
 import { GATE_ADDRESS, EXPLORER } from "@/lib/contract";
+import { ThreatLists } from "@/components/threat-lists";
 
 export const metadata = { title: "Proof — AegisFlow" };
 
@@ -182,6 +183,22 @@ export default function Proof() {
               </dd>
             </div>
           </dl>
+        </section>
+
+        {/* Threat intelligence — the data behind the verdicts */}
+        <section className="card p-8">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-blocked">
+              <AlertTriangle className="w-6 h-6" />
+            </span>
+            <h2 className="text-xl font-bold">The data — every list, in the open</h2>
+          </div>
+          <p className="text-sm text-mutedfg leading-relaxed mb-6">
+            Screening runs against several public threat lists, refreshed hourly
+            inside the enclave. Browse them, open the raw sources, or copy an
+            address to test it yourself.
+          </p>
+          <ThreatLists />
         </section>
       </div>
     </div>

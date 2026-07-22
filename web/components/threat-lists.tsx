@@ -15,7 +15,7 @@ interface ThreatList {
   data_url?: string;
 }
 
-export default function Sanctions() {
+export function ThreatLists() {
   const [data, setData] = useState<{ total: number; lists: ThreatList[] } | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -38,14 +38,9 @@ export default function Sanctions() {
   }, []);
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2">Threat intelligence</h1>
-      <p className="text-mutedfg mb-4">
-        The live lists every screening runs against — real data, refreshed
-        hourly inside the verifier.
-      </p>
+    <div>
       {data && (
-        <p className="font-mono text-sm mb-10">
+        <p className="font-mono text-sm mb-6">
           <span className="text-blocked font-bold text-2xl">{data.total.toLocaleString()}</span>{" "}
           <span className="text-mutedfg">known-bad wallets monitored across {data.lists.length} lists</span>
         </p>
@@ -67,15 +62,11 @@ export default function Sanctions() {
               <div>
                 <div className="flex items-center gap-2.5">
                   {l.status === "ok" ? (
-                    <span className="text-clear">
-                      <ShieldCheck className="w-5 h-5" />
-                    </span>
+                    <span className="text-clear"><ShieldCheck className="w-5 h-5" /></span>
                   ) : (
-                    <span className="text-review">
-                      <AlertTriangle className="w-5 h-5" />
-                    </span>
+                    <span className="text-review"><AlertTriangle className="w-5 h-5" /></span>
                   )}
-                  <h2 className="font-semibold">{l.name}</h2>
+                  <h3 className="font-semibold">{l.name}</h3>
                   {l.required && (
                     <span className="text-[10px] font-mono border border-gold/40 text-gold rounded px-1.5 py-0.5">
                       FAIL-CLOSED
@@ -93,26 +84,15 @@ export default function Sanctions() {
             </div>
 
             <div className="flex flex-wrap gap-4 mt-4 text-xs font-mono">
-              <button
-                className="link text-mutedfg"
-                onClick={() => setOpen(open === l.id ? null : l.id)}
-              >
+              <button className="link text-mutedfg" onClick={() => setOpen(open === l.id ? null : l.id)}>
                 {open === l.id ? "hide addresses" : `view addresses (${Math.min(l.count, 100)})`}
               </button>
               {l.data_url && (
-                <a
-                  className="link text-mutedfg inline-flex items-center gap-1"
-                  target="_blank"
-                  href={l.data_url}
-                >
+                <a className="link text-mutedfg inline-flex items-center gap-1" target="_blank" href={l.data_url}>
                   open the full list <ExternalLink className="w-3 h-3" />
                 </a>
               )}
-              <a
-                className="link text-mutedfg inline-flex items-center gap-1"
-                target="_blank"
-                href={l.source_url}
-              >
+              <a className="link text-mutedfg inline-flex items-center gap-1" target="_blank" href={l.source_url}>
                 official source <ExternalLink className="w-3 h-3" />
               </a>
             </div>
@@ -147,11 +127,11 @@ export default function Sanctions() {
         ))}
       </div>
 
-      <p className="text-xs text-mutedfg mt-8 leading-relaxed">
-        Note: OFAC has publicly sanctioned one XRP address to date — sanctions
-        can hit any address at any time, and this verifier picks up new listings
-        within the hour, automatically. The additional lists extend coverage to
-        state-sponsored hackers, terror financing, and ransomware operations.
+      <p className="text-xs text-mutedfg mt-6 leading-relaxed">
+        OFAC has publicly sanctioned one XRP address to date — sanctions can hit
+        any address at any time, and this verifier picks up new listings within
+        the hour. The additional lists extend coverage to state-sponsored
+        hackers, terror financing, and ransomware operations.
       </p>
     </div>
   );

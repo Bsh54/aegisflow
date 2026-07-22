@@ -229,7 +229,7 @@ export default function Verify() {
             {result.verdict === 3 && (
               <a
                 className="link text-xs font-mono text-mutedfg inline-flex items-center gap-1.5 mt-2"
-                href="/sanctions"
+                href="/proof"
               >
                 view the monitored threat lists →
               </a>
