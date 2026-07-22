@@ -39,9 +39,10 @@ export default function Home() {
             <span className="text-mutedfg">Legally. Privately.</span>
           </h1>
           <p className="text-mutedfg text-lg leading-relaxed max-w-xl mb-8">
-            AegisFlow gates FXRP minting behind a confidential AML check — real
-            sanctions data, enclave-side screening, and on-chain verdicts proven
-            by the Flare Data Connector.
+            AegisFlow screens every address inside a sealed enclave — so
+            institutions can prove a wallet is clean before minting FXRP,
+            without ever exposing who they checked. Verdicts are confirmed
+            on-chain by the Flare Data Connector.
           </p>
           <div className="flex flex-wrap gap-4">
             <Link href="/verify" className="btn">
