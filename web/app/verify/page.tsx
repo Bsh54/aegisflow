@@ -334,9 +334,6 @@ export default function Verify() {
               <a href="/proof" className="btn-ghost !py-2 !min-h-[40px] text-sm">
                 How is this proven?
               </a>
-              <a href="/dashboard" className="btn-ghost !py-2 !min-h-[40px] text-sm">
-                View compliance log
-              </a>
             </div>
           </div>
         </div>

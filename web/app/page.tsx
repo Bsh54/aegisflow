@@ -47,8 +47,8 @@ export default function Home() {
             <Link href="/verify" className="btn">
               Run a verification
             </Link>
-            <Link href="/dashboard" className="btn-ghost">
-              Compliance dashboard
+            <Link href="/proof" className="btn-ghost">
+              How it&apos;s proven
             </Link>
           </div>
         </div>

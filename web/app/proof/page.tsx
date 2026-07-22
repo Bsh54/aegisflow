@@ -70,9 +70,9 @@ export default function Proof() {
             <span className="font-mono text-fg">/attest/&lt;address&gt;</span>{" "}
             endpoint, agree on the response, and the voting round produces a{" "}
             <strong className="text-fg">Merkle consensus proof</strong>. The
-            gate contract rejects anything else — including us. Verdicts marked{" "}
-            <span className="text-clear font-mono">FDC ✓</span> in the dashboard
-            carry this proof.
+            gate contract rejects anything else — including us. Such verdicts
+            are stored on-chain with an <span className="text-clear font-mono">FDC ✓</span>{" "}
+            flag anyone can read.
           </p>
           <dl className="text-xs font-mono text-mutedfg space-y-2">
             <div className="flex gap-3">
@@ -126,9 +126,13 @@ export default function Proof() {
             </li>
             <li>
               <span className="text-fg">The full screening history</span> — every
-              verdict ever recorded, with its transaction:{" "}
-              <a className="link text-fg" href="/dashboard">
-                compliance dashboard
+              verdict ever recorded, read directly on the block explorer:{" "}
+              <a
+                className="link text-fg inline-flex items-center gap-1.5"
+                target="_blank"
+                href={`${EXPLORER}/address/${GATE_ADDRESS}#events`}
+              >
+                gate contract events <ExternalLink />
               </a>
             </li>
             <li>
