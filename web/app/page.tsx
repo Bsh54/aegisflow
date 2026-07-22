@@ -17,7 +17,7 @@ const FEATURES = [
   {
     icon: <Link2 className="w-6 h-6" />,
     title: "Trustless verdicts",
-    body: "~100 independent Flare Data Connector providers reach consensus on each verdict. Not even the operator can forge a result.",
+    body: "Independent Flare Data Connector providers reach consensus on each verdict. Not even the operator can forge a result.",
   },
 ];
 

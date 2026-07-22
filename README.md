@@ -48,7 +48,7 @@ sealed inside trusted hardware, enforced trustlessly on-chain.
    threat lists (refreshed hourly, fail-closed on the required OFAC list) and
    exposes a deterministic `GET /attest/<address>` endpoint returning only
    `{address, verdict}`. Raw evidence never leaves the enclave.
-3. An **FDC Web2Json attestation** is requested: ~100 independent Flare data
+3. An **FDC Web2Json attestation** is requested: independent Flare data
    providers each fetch the endpoint, reach consensus, and the round produces a
    Merkle proof retrievable from the DA layer.
 4. **`AegisFlowGate`** (Solidity) verifies the proof via
@@ -125,7 +125,7 @@ aegisflow/
 cd contracts
 npm install
 cp .env.example .env          # set PRIVATE_KEY (test wallet only)
-npx hardhat test              # 4 unit tests
+npx hardhat test              # unit tests (gate, gateway, ERC-3643 module)
 npx hardhat run scripts/deploy.ts --network coston2
 ```
 
@@ -201,7 +201,7 @@ FAssets rate-limits *how much* can be minted; AegisFlow governs *who* may mint.
   `REVIEW`, never an automatic allow.
 - **URL pinning:** the gate rejects FDC proofs whose attested URL differs from
   `attestBaseUrl + address` — proofs for other APIs cannot be replayed.
-- **Determinism:** `/attest` carries no timestamps or volatile fields, so ~100
+- **Determinism:** `/attest` carries no timestamps or volatile fields, so
   independent FDC providers converge on identical responses.
 - **Enclave privacy:** only the verdict and an evidence hash leave the TEE;
   the transaction graph and screening details stay sealed.

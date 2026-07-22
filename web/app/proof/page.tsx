@@ -66,7 +66,7 @@ export default function Proof() {
           <p className="text-sm text-mutedfg leading-relaxed mb-5">
             A verdict only enters the chain through an FDC{" "}
             <span className="font-mono text-fg">Web2Json</span> attestation:
-            ~100 independent Flare data providers each fetch the deterministic{" "}
+            independent Flare data providers each fetch the deterministic{" "}
             <span className="font-mono text-fg">/attest/&lt;address&gt;</span>{" "}
             endpoint, agree on the response, and the voting round produces a{" "}
             <strong className="text-fg">Merkle consensus proof</strong>. The
@@ -103,8 +103,8 @@ export default function Proof() {
           </p>
           <ol className="text-sm text-mutedfg space-y-4 list-decimal list-inside">
             <li>
-              <span className="text-fg">The FDC voting round</span> where ~100
-              data providers attested the verdict:{" "}
+              <span className="text-fg">The FDC voting round</span> where
+              independent data providers attested the verdict:{" "}
               <a
                 className="link font-mono text-fg inline-flex items-center gap-1.5"
                 target="_blank"

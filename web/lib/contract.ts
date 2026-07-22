@@ -13,6 +13,7 @@ export const EXPLORER = "https://coston2-explorer.flare.network";
 export const GATE_ABI = [
   "function isCompliant(bytes32 xrplAddressHash) view returns (bool)",
   "function getScreening(bytes32 xrplAddressHash) view returns (uint8 verdict, uint64 timestamp, bytes32 evidenceHash, bool fdcVerified)",
+  "function submitVerdict(bytes32 xrplAddressHash, uint8 verdict, bytes32 evidenceHash)",
   "event Screened(bytes32 indexed xrplAddressHash, uint8 verdict, uint64 timestamp, bytes32 evidenceHash, bool fdcVerified)",
 ];
 
