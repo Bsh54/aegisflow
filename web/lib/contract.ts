@@ -24,6 +24,10 @@ export const FXRP_ADDRESS =
   process.env.NEXT_PUBLIC_FXRP_ADDRESS ??
   "0x4540E3c8EFCC673ED2F501ca9b990CaFe99B8b9b";
 
+export const MODULE_ADDRESS =
+  process.env.NEXT_PUBLIC_MODULE_ADDRESS ??
+  "0x838d5DE18e315bE7111420bDAa090a2260673e8c";
+
 export const GATEWAY_ABI = [
   "function requestMint(bytes32 xrplAddressHash, address recipient)",
   "function canMint(bytes32 xrplAddressHash) view returns (bool)",

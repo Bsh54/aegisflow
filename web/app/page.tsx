@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Scale, Lock, Link2, ShieldCheck, ExternalLink } from "@/components/icons";
 import { LiveStatus } from "@/components/live";
-import { GATE_ADDRESS, EXPLORER } from "@/lib/contract";
+import { GATE_ADDRESS, MODULE_ADDRESS, EXPLORER } from "@/lib/contract";
 
 const FEATURES = [
   {
@@ -114,7 +114,64 @@ export default function Home() {
         </div>
       </section>
 
-      {/* 6. Final CTA */}
+      {/* 6. Reusable infrastructure — ERC-3643 */}
+      <section className="mt-20">
+        <div className="card p-8 md:p-10">
+          <p className="text-flare font-mono text-xs tracking-widest mb-3">
+            NOT JUST FXRP
+          </p>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">
+            A compliance module any regulated token can plug in
+          </h2>
+          <p className="text-mutedfg leading-relaxed max-w-3xl mb-8">
+            AegisFlow implements the{" "}
+            <span className="text-fg">ERC-3643 (T-REX)</span> compliance-module
+            interface — the industry standard for permissioned tokens, with
+            billions in real-world assets already tokenized on it. Any ERC-3643
+            token on Flare can bind AegisFlow and have every transfer gated by
+            the same confidential, FDC-proven verdicts. One firewall, the whole
+            regulated-asset ecosystem.
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-5">
+            <div className="bg-base border border-edge rounded-xl p-5">
+              <p className="font-mono text-flare/70 text-xs mb-2">moduleCheck()</p>
+              <p className="text-sm text-mutedfg">
+                Called on every transfer — returns true only if the receiver is
+                currently compliant in the gate.
+              </p>
+            </div>
+            <div className="bg-base border border-edge rounded-xl p-5">
+              <p className="font-mono text-flare/70 text-xs mb-2">plug &amp; play</p>
+              <p className="text-sm text-mutedfg">
+                No per-token configuration — bind the module and screening is
+                enforced. Fail-closed for unscreened addresses.
+              </p>
+            </div>
+            <div className="bg-base border border-edge rounded-xl p-5">
+              <p className="font-mono text-flare/70 text-xs mb-2">standard interface</p>
+              <p className="text-sm text-mutedfg">
+                Conforms to Tokeny&apos;s T-REX <span className="font-mono">IModule</span>,
+                so it drops into existing ERC-3643 deployments unchanged.
+              </p>
+            </div>
+          </div>
+
+          <p className="text-xs font-mono text-mutedfg mt-6">
+            module (Coston2):{" "}
+            <a
+              className="link text-fg inline-flex items-center gap-1.5"
+              target="_blank"
+              href={`${EXPLORER}/address/${MODULE_ADDRESS}`}
+            >
+              {MODULE_ADDRESS.slice(0, 12)}…{MODULE_ADDRESS.slice(-6)}
+              <ExternalLink />
+            </a>
+          </p>
+        </div>
+      </section>
+
+      {/* 7. Final CTA */}
       <section className="text-center py-20">
         <h2 className="text-2xl md:text-3xl font-bold mb-4">
           See it decide in real time.
