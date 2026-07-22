@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Scale, Lock, Link2, ShieldCheck, ExternalLink } from "@/components/icons";
-import { LiveStatus, LiveMetrics } from "@/components/live";
+import { LiveStatus } from "@/components/live";
 import { GATE_ADDRESS, EXPLORER } from "@/lib/contract";
 
 const FEATURES = [
@@ -55,11 +55,8 @@ export default function Home() {
         <LiveStatus />
       </section>
 
-      {/* 2. Key metrics */}
-      <LiveMetrics />
-
-      {/* 3. Features */}
-      <section className="grid md:grid-cols-3 gap-5 mt-14">
+      {/* 2. Features */}
+      <section className="grid md:grid-cols-3 gap-5 mt-6">
         {FEATURES.map((f) => (
           <div
             key={f.title}

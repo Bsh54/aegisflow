@@ -21,25 +21,42 @@ interface OnChain {
 
 const STYLE: Record<
   number,
-  { badge: string; label: string; icon: React.ReactNode; note: string }
+  {
+    ring: string;
+    text: string;
+    bg: string;
+    label: string;
+    headline: string;
+    icon: React.ReactNode;
+    note: string;
+  }
 > = {
   1: {
-    badge: "bg-clear/10 text-clear border-clear/40",
+    ring: "!border-clear/50",
+    text: "text-clear",
+    bg: "bg-clear/10",
     label: "CLEAR",
-    icon: <Check className="w-5 h-5" />,
-    note: "Not sanctioned — FXRP mint would be authorized.",
+    headline: "Address authorized",
+    icon: <Check className="w-8 h-8" />,
+    note: "This address is not on the OFAC SDN sanctions list. The FXRP mint would be authorized (verdict valid 24h).",
   },
   2: {
-    badge: "bg-review/10 text-review border-review/40",
+    ring: "!border-review/50",
+    text: "text-review",
+    bg: "bg-review/10",
     label: "REVIEW",
-    icon: <AlertTriangle className="w-5 h-5" />,
-    note: "Uncertain result — held for manual review (fail-closed).",
+    headline: "Held for review",
+    icon: <AlertTriangle className="w-8 h-8" />,
+    note: "The screening could not complete with certainty. Fail-closed policy: the mint stays blocked until a compliance officer reviews it.",
   },
   3: {
-    badge: "bg-blocked/10 text-blocked border-blocked/40",
+    ring: "!border-blocked/50",
+    text: "text-blocked",
+    bg: "bg-blocked/10",
     label: "BLOCKED",
-    icon: <XCircle className="w-5 h-5" />,
-    note: "OFAC SDN match — FXRP mint denied.",
+    headline: "Mint denied",
+    icon: <XCircle className="w-8 h-8" />,
+    note: "This address appears on the U.S. Treasury OFAC SDN sanctions list — public information. The FXRP mint is denied and a sealed audit proof is kept.",
   },
 };
 
@@ -154,57 +171,95 @@ export default function Verify() {
       )}
 
       {result && s && step === "done" && (
-        <div className="card p-7 mt-5">
-          <div
-            className={`inline-flex items-center gap-2.5 border rounded-xl px-5 py-3 font-bold text-lg ${s.badge}`}
-          >
-            {s.icon}
-            {s.label}
+        <div className={`card mt-5 overflow-hidden border-2 ${s.ring}`} role="status">
+          {/* Verdict header */}
+          <div className={`flex items-center gap-5 p-7 ${s.bg}`}>
+            <span className={s.text}>{s.icon}</span>
+            <div>
+              <p className={`text-2xl font-bold ${s.text}`}>{s.headline}</p>
+              <p className="font-mono text-xs text-mutedfg mt-1">
+                verdict: {s.label} · {result.source}
+                {verifierSource &&
+                  ` · served by ${verifierSource === "tee" ? "TDX enclave" : "standby node"}`}
+              </p>
+            </div>
           </div>
-          <p className="text-mutedfg mt-4">{s.note}</p>
-          <dl className="mt-6 text-xs font-mono text-mutedfg space-y-2">
-            <div className="flex gap-3">
-              <dt className="w-32 shrink-0">source</dt>
-              <dd className="text-fg">
-                {result.source}
-                {verifierSource && (
-                  <span className="ml-2 text-mutedfg">
-                    · served by {verifierSource === "tee" ? "TDX enclave" : "standby node"}
-                  </span>
-                )}
-              </dd>
-            </div>
-            <div className="flex gap-3">
-              <dt className="w-32 shrink-0">evidence (sealed)</dt>
-              <dd className="text-fg break-all">{result.evidence_hash.slice(0, 34)}…</dd>
-            </div>
-            {onchain && onchain.verdict !== 0 && (
+
+          <div className="p-7">
+            {/* The screened address, in full */}
+            <p className="text-xs text-mutedfg font-mono tracking-widest mb-2">
+              SCREENED ADDRESS
+            </p>
+            <p className="font-mono text-sm text-fg break-all bg-base border border-edge rounded-xl px-4 py-3">
+              {addr.trim()}
+            </p>
+
+            <p className="text-sm text-mutedfg leading-relaxed mt-5">{s.note}</p>
+            {result.verdict === 3 && (
+              <a
+                className="link text-xs font-mono text-mutedfg inline-flex items-center gap-1.5 mt-2"
+                target="_blank"
+                href="https://github.com/0xB10C/ofac-sanctioned-digital-currency-addresses/blob/lists/sanctioned_addresses_XRP.txt"
+              >
+                view the public OFAC SDN list (XRP) <ExternalLink />
+              </a>
+            )}
+
+            {/* Proof trail */}
+            <dl className="mt-6 text-xs font-mono text-mutedfg space-y-2 border-t border-edge pt-5">
               <div className="flex gap-3">
-                <dt className="w-32 shrink-0">on-chain</dt>
-                <dd className="text-fg">
-                  {VERDICT_LABELS[onchain.verdict]}
-                  {onchain.fdcVerified ? (
-                    <span className="text-clear ml-2">FDC-verified ✓</span>
-                  ) : (
-                    <span className="ml-2">attestor</span>
-                  )}
+                <dt className="w-32 shrink-0">evidence (sealed)</dt>
+                <dd className="text-fg break-all">{result.evidence_hash.slice(0, 34)}…</dd>
+              </div>
+              {onchain && onchain.verdict !== 0 && (
+                <div className="flex gap-3">
+                  <dt className="w-32 shrink-0">on-chain record</dt>
+                  <dd className="text-fg">
+                    {VERDICT_LABELS[onchain.verdict]}
+                    {onchain.fdcVerified ? (
+                      <span className="text-clear ml-2">FDC-verified ✓</span>
+                    ) : (
+                      <span className="ml-2">attestor</span>
+                    )}
+                  </dd>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <dt className="w-32 shrink-0">gate contract</dt>
+                <dd>
+                  <a
+                    className="link text-fg inline-flex items-center gap-1.5"
+                    target="_blank"
+                    href={`${EXPLORER}/address/${GATE_ADDRESS}`}
+                  >
+                    {GATE_ADDRESS.slice(0, 10)}…{GATE_ADDRESS.slice(-6)}
+                    <ExternalLink />
+                  </a>
                 </dd>
               </div>
-            )}
-            <div className="flex gap-3">
-              <dt className="w-32 shrink-0">gate</dt>
-              <dd>
-                <a
-                  className="link text-fg inline-flex items-center gap-1.5"
-                  target="_blank"
-                  href={`${EXPLORER}/address/${GATE_ADDRESS}`}
-                >
-                  {GATE_ADDRESS.slice(0, 10)}…{GATE_ADDRESS.slice(-6)}
-                  <ExternalLink />
-                </a>
-              </dd>
+            </dl>
+
+            {/* Next steps (error recovery / clear paths) */}
+            <div className="flex flex-wrap gap-3 mt-6">
+              <button
+                className="btn-ghost !py-2 !min-h-[40px] text-sm"
+                onClick={() => {
+                  setAddr("");
+                  setStep("idle");
+                  setResult(null);
+                  setOnchain(null);
+                }}
+              >
+                Screen another address
+              </button>
+              <a href="/proof" className="btn-ghost !py-2 !min-h-[40px] text-sm">
+                How is this proven?
+              </a>
+              <a href="/dashboard" className="btn-ghost !py-2 !min-h-[40px] text-sm">
+                View compliance log
+              </a>
             </div>
-          </dl>
+          </div>
         </div>
       )}
     </div>

@@ -87,6 +87,65 @@ export default function Proof() {
           </dl>
         </section>
 
+        <section className="card p-8 !border-gold/30">
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-gold">
+              <ShieldCheck className="w-6 h-6" />
+            </span>
+            <h2 className="text-xl font-bold">Proof of execution — check it yourself</h2>
+          </div>
+          <p className="text-sm text-mutedfg leading-relaxed mb-5">
+            This pipeline has really run, end to end, on public infrastructure.
+            Here is one real execution — a sanctioned address screened, attested
+            by the FDC network, and blocked on-chain. Every link below is
+            public infrastructure operated by Flare, not by us:
+          </p>
+          <ol className="text-sm text-mutedfg space-y-4 list-decimal list-inside">
+            <li>
+              <span className="text-fg">The FDC voting round</span> where ~100
+              data providers attested the verdict:{" "}
+              <a
+                className="link font-mono text-fg inline-flex items-center gap-1.5"
+                target="_blank"
+                href="https://coston2-systems-explorer.flare.rocks/voting-round/1402754?tab=fdc"
+              >
+                round 1402754 · Flare Systems Explorer <ExternalLink />
+              </a>
+            </li>
+            <li>
+              <span className="text-fg">The on-chain proof submission</span>{" "}
+              (verdict BLOCKED, fdcVerified=true):{" "}
+              <a
+                className="link font-mono text-fg inline-flex items-center gap-1.5"
+                target="_blank"
+                href={`${EXPLORER}/tx/0x9c41c88128a5b5a9cd72aa258134201ec6aa57e7ee2d8097affa42eeb7395d87`}
+              >
+                tx 0x9c41c8…95d87 <ExternalLink />
+              </a>
+            </li>
+            <li>
+              <span className="text-fg">The full screening history</span> — every
+              verdict ever recorded, with its transaction:{" "}
+              <a className="link text-fg" href="/dashboard">
+                compliance dashboard
+              </a>
+            </li>
+            <li>
+              <span className="text-fg">Reproduce it</span>: run{" "}
+              <span className="font-mono">scripts/fdcAttest.ts</span> from the{" "}
+              <a
+                className="link text-fg inline-flex items-center gap-1.5"
+                target="_blank"
+                href="https://github.com/Bsh54/aegisflow#3-fdc-attestation-trustless-verdict"
+              >
+                open-source repo <ExternalLink />
+              </a>{" "}
+              against any XRPL address — you will produce the same kind of proof
+              without any help from us.
+            </li>
+          </ol>
+        </section>
+
         <section className="card p-8">
           <div className="flex items-center gap-3 mb-4">
             <span className="text-clear">
