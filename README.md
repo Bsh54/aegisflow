@@ -34,7 +34,7 @@ sealed inside trusted hardware, enforced trustlessly on-chain.
 ┌────────────┐    ┌──────────────────┐    ┌──────────────────┐    ┌───────────────┐
 │  Web app   │───►│  TEE verifier     │───►│  Flare Data       │───►│  Gate contract │
 │  (Next.js) │    │  (Intel TDX /     │    │  Connector (FDC)  │    │  (Coston2)     │
-│            │    │   Phala dstack)   │    │  ~100 providers   │    │                │
+│            │    │   Phala dstack)   │    │  provider consensus│   │                │
 └────────────┘    └──────────────────┘    └──────────────────┘    └───────────────┘
    UI + proxy       OFAC SDN screening      Web2Json attestation     verifies proof,
    w/ failover      sealed in enclave       Merkle consensus         gates FXRP mint
@@ -72,7 +72,13 @@ stays up even when the enclave is powered down between demo windows.
 | Compliant FXRP gateway (real FXRP) | `0x84DA55ef31a7a6ceFFDaB9A226cd2c2D1bA6FE73` |
 | ERC-3643 compliance module | `0x838d5DE18e315bE7111420bDAa090a2260673e8c` |
 | TEE verifier | Phala Cloud CVM (Intel TDX, dstack) — bootstraps `tee/app.py` from this repo |
+| Enclave (verifiable) | app id `8498ab9f2f973abd475e9948aa51c8fdc3674848` · reachable at `https://8498ab9f2f973abd475e9948aa51c8fdc3674848-8000.dstack-pha-prod5.phala.network/health` · attest with `phala cvms attestation 8498ab9f2f973abd475e9948aa51c8fdc3674848` |
 | Threat data | OFAC SDN (XRP), FBI Lazarus, Israel NBCTF, Ransomwhere — all public, hourly refresh |
+
+> Note: the enclave is powered on for demo and the judging window (Aug 13–22);
+> outside that window the app auto-fails over to a standby verifier (same code,
+> same data) so the site stays up. The direct enclave URL only responds while
+> the CVM is running.
 
 ## Threat intelligence sources
 
