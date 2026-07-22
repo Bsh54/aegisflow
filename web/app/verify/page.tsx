@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { gate, addressHash, VERDICT_LABELS, EXPLORER, GATE_ADDRESS } from "@/lib/contract";
 import { Check, AlertTriangle, XCircle, Lock, Loader, ExternalLink } from "@/components/icons";
+import { BatchScreen } from "./batch";
 
 type Step = "idle" | "screening" | "onchain" | "done" | "error";
 
 interface ScreenResult {
   verdict: number;
   verdict_label: string;
+  matched_list?: string | null;
   evidence_hash: string;
   source: string;
 }
@@ -63,9 +65,11 @@ const STYLE: Record<
 const SAMPLES = [
   { label: "clean address", value: "rHb9CJAWyB4rj91VRWn96DkukG4bwdtyTh" },
   { label: "OFAC-sanctioned", value: "rnXyVQzgxZe7TR1EPzTkGj2jxH4LMJYh66" },
+  { label: "FBI Lazarus wallet", value: "bc1qqvpjgaurtnhc8smkmdtwhx9c8207m0prsyxyjx" },
 ];
 
 export default function Verify() {
+  const [mode, setMode] = useState<"single" | "batch">("single");
   const [addr, setAddr] = useState("");
   const [step, setStep] = useState<Step>("idle");
   const [result, setResult] = useState<ScreenResult | null>(null);
@@ -110,10 +114,33 @@ export default function Verify() {
   return (
     <div className="max-w-2xl mx-auto">
       <h1 className="text-3xl font-bold mb-2">Compliance verification</h1>
-      <p className="text-mutedfg mb-10">
-        Screen an XRPL address against the official OFAC sanctions list — confidentially.
+      <p className="text-mutedfg mb-6">
+        Screen wallet addresses against real sanctions &amp; threat lists — confidentially.
       </p>
 
+      <div className="inline-flex gap-1 p-1 bg-base border border-edge rounded-xl mb-6">
+        <button
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
+            mode === "single" ? "bg-surface text-fg" : "text-mutedfg hover:text-fg"
+          }`}
+          onClick={() => setMode("single")}
+        >
+          Single address
+        </button>
+        <button
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer ${
+            mode === "batch" ? "bg-surface text-fg" : "text-mutedfg hover:text-fg"
+          }`}
+          onClick={() => setMode("batch")}
+        >
+          Batch
+        </button>
+      </div>
+
+      {mode === "batch" && <BatchScreen />}
+
+      {mode === "single" && (
+      <>
       <div className="card p-7">
         <label htmlFor="xrpl" className="text-xs text-mutedfg font-mono tracking-widest">
           XRPL ADDRESS
@@ -143,6 +170,10 @@ export default function Verify() {
               {sample.label}
             </button>
           ))}
+          <span className="text-mutedfg/50">·</span>
+          <a href="/sanctions" className="link">
+            browse all monitored lists →
+          </a>
         </div>
       </div>
 
@@ -178,7 +209,8 @@ export default function Verify() {
             <div>
               <p className={`text-2xl font-bold ${s.text}`}>{s.headline}</p>
               <p className="font-mono text-xs text-mutedfg mt-1">
-                verdict: {s.label} · {result.source}
+                verdict: {s.label}
+                {result.matched_list && ` · matched: ${result.matched_list}`}
                 {verifierSource &&
                   ` · served by ${verifierSource === "tee" ? "TDX enclave" : "standby node"}`}
               </p>
@@ -198,10 +230,9 @@ export default function Verify() {
             {result.verdict === 3 && (
               <a
                 className="link text-xs font-mono text-mutedfg inline-flex items-center gap-1.5 mt-2"
-                target="_blank"
-                href="https://github.com/0xB10C/ofac-sanctioned-digital-currency-addresses/blob/lists/sanctioned_addresses_XRP.txt"
+                href="/sanctions"
               >
-                view the public OFAC SDN list (XRP) <ExternalLink />
+                view the monitored threat lists →
               </a>
             )}
 
@@ -261,6 +292,8 @@ export default function Verify() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
     </div>
   );

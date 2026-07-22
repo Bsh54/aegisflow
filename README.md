@@ -3,8 +3,9 @@
 **Confidential AML compliance firewall for FXRP inflows on Flare.**
 
 AegisFlow is a privacy-preserving compliance gate for institutions entering the
-Flare ecosystem: every source XRPL address is screened against the official
-OFAC SDN sanctions list before FXRP can be minted — the screening runs inside a
+Flare ecosystem: every source wallet address is screened against multiple real
+threat-intelligence lists (OFAC sanctions, FBI Lazarus Group, Israel NBCTF,
+ransomware wallets) before FXRP can be minted — the screening runs inside a
 confidential enclave, and the verdict is proven on-chain by the Flare Data
 Connector, so no single party (including the operator) can forge a result.
 
@@ -43,8 +44,8 @@ sealed inside trusted hardware, enforced trustlessly on-chain.
 
 1. A user (or institution back-office) submits an XRPL address.
 2. The **verifier** — a FastAPI service running inside a Phala Cloud
-   confidential VM (Intel TDX, dstack) — screens it against the official OFAC
-   SDN digital-currency list (refreshed hourly, fail-closed on any error) and
+   confidential VM (Intel TDX, dstack) — screens it against several public
+   threat lists (refreshed hourly, fail-closed on the required OFAC list) and
    exposes a deterministic `GET /attest/<address>` endpoint returning only
    `{address, verdict}`. Raw evidence never leaves the enclave.
 3. An **FDC Web2Json attestation** is requested: ~100 independent Flare data
@@ -69,7 +70,24 @@ stays up even when the enclave is powered down between demo windows.
 | Web app + API proxy | https://aegisflow.shadrakbessanh.me |
 | Gate contract (Coston2) | [`0x0C27183591F69fF97Cc6dD1c019D2388352D69CA`](https://coston2-explorer.flare.network/address/0x0C27183591F69fF97Cc6dD1c019D2388352D69CA) |
 | TEE verifier | Phala Cloud CVM (Intel TDX, dstack) — bootstraps `tee/app.py` from this repo |
-| Sanctions data | Official OFAC SDN digital-currency address list (XRP) |
+| Threat data | OFAC SDN (XRP), FBI Lazarus, Israel NBCTF, Ransomwhere — all public, hourly refresh |
+
+## Threat intelligence sources
+
+Screening runs against several independent, public lists — all fetched and
+refreshed hourly inside the enclave:
+
+| List | Jurisdiction | Coverage | Policy |
+|---|---|---|---|
+| **OFAC SDN (XRP)** | 🇺🇸 US Treasury | Sanctioned XRP addresses | Required · dual-channel cross-check · fail-closed |
+| **FBI Lazarus Group** | 🇺🇸 US FBI | North-Korean state hacker wallets | Best-effort (via OpenSanctions) |
+| **Israel NBCTF** | 🇮🇱 Israel | Terror-financing wallets | Best-effort (via OpenSanctions) |
+| **Ransomwhere** | 🌍 Global | Known ransomware payment wallets | Best-effort (via OpenSanctions) |
+
+Any address matching *any* list yields `BLOCKED`. If the required OFAC list
+cannot be loaded, screening fails closed (`REVIEW`) — never an automatic allow.
+The live lists are browsable at `/sanctions` and via the verifier's
+`GET /sanctions` endpoint.
 
 ## Repository layout
 

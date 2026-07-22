@@ -32,6 +32,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <div className="flex items-center gap-2 md:gap-3 text-sm">
               <Link
+                href="/sanctions"
+                className="btn-ghost !py-2 !min-h-[40px] !px-4 text-sm hidden md:inline-flex"
+              >
+                Lists
+              </Link>
+              <Link
                 href="/dashboard"
                 className="btn-ghost !py-2 !min-h-[40px] !px-4 text-sm"
               >
