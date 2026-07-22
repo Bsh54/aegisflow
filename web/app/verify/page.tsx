@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { gate, addressHash, VERDICT_LABELS, EXPLORER, GATE_ADDRESS } from "@/lib/contract";
-import { Check, AlertTriangle, XCircle, Lock, Loader, ExternalLink } from "@/components/icons";
+import { Check, AlertTriangle, XCircle, Lock, Loader, ExternalLink, Link2 } from "@/components/icons";
 
 type Step = "idle" | "screening" | "onchain" | "done" | "error";
 
@@ -75,13 +75,41 @@ export default function Verify() {
   const [verifierSource, setVerifierSource] = useState("");
   const [error, setError] = useState("");
 
+  const [mintState, setMintState] = useState<"idle" | "running" | "fulfilled" | "refused">("idle");
+  const [mintInfo, setMintInfo] = useState<{ txUrl?: string; reason?: string; released?: string } | null>(null);
+
   const busy = step === "screening" || step === "onchain";
+
+  async function requestMint() {
+    setMintState("running");
+    setMintInfo(null);
+    try {
+      const res = await fetch("/api/request-mint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ xrpl_address: addr.trim() }),
+      });
+      const data = await res.json();
+      if (data.outcome === "fulfilled") {
+        setMintState("fulfilled");
+        setMintInfo({ txUrl: data.explorerUrl, released: data.released });
+      } else {
+        setMintState("refused");
+        setMintInfo({ reason: data.reason });
+      }
+    } catch (e: any) {
+      setMintState("refused");
+      setMintInfo({ reason: e.message ?? String(e) });
+    }
+  }
 
   async function run() {
     setStep("screening");
     setResult(null);
     setOnchain(null);
     setError("");
+    setMintState("idle");
+    setMintInfo(null);
     try {
       const res = await fetch("/screen", {
         method: "POST",
@@ -241,6 +269,53 @@ export default function Verify() {
               </div>
             </dl>
 
+            {/* Live enforcement — request FXRP through the compliant gateway */}
+            <div className="mt-6 border-t border-edge pt-5">
+              <div className="flex items-center gap-2 mb-2">
+                <span className="text-flare">
+                  <Link2 className="w-4 h-4" />
+                </span>
+                <p className="text-sm font-semibold">Try the real conversion</p>
+              </div>
+              <p className="text-xs text-mutedfg leading-relaxed mb-4">
+                Request FXRP through the compliant gateway. The gateway releases
+                FXRP <span className="text-fg">only</span> if this address is
+                compliant — otherwise the on-chain transaction is refused.
+              </p>
+
+              {mintState === "idle" && (
+                <button className="btn !py-2 !min-h-[40px] text-sm" onClick={requestMint}>
+                  Request 100 FXRP
+                </button>
+              )}
+              {mintState === "running" && (
+                <button className="btn !py-2 !min-h-[40px] text-sm" disabled>
+                  <Loader className="w-4 h-4" /> Requesting on-chain…
+                </button>
+              )}
+              {mintState === "fulfilled" && mintInfo && (
+                <div className="rounded-xl border border-clear/40 bg-clear/10 p-4">
+                  <p className="flex items-center gap-2 text-clear font-semibold text-sm">
+                    <Check className="w-4 h-4" /> FXRP released
+                  </p>
+                  <p className="text-xs text-mutedfg mt-1 font-mono">
+                    +{(Number(mintInfo.released) / 1e6).toFixed(0)} FXRP delivered ·{" "}
+                    <a className="link text-fg" target="_blank" href={mintInfo.txUrl}>
+                      view transaction ↗
+                    </a>
+                  </p>
+                </div>
+              )}
+              {mintState === "refused" && mintInfo && (
+                <div className="rounded-xl border border-blocked/40 bg-blocked/10 p-4">
+                  <p className="flex items-center gap-2 text-blocked font-semibold text-sm">
+                    <XCircle className="w-4 h-4" /> Conversion refused
+                  </p>
+                  <p className="text-xs text-mutedfg mt-1">{mintInfo.reason}</p>
+                </div>
+              )}
+            </div>
+
             {/* Next steps (error recovery / clear paths) */}
             <div className="flex flex-wrap gap-3 mt-6">
               <button
@@ -250,6 +325,8 @@ export default function Verify() {
                   setStep("idle");
                   setResult(null);
                   setOnchain(null);
+                  setMintState("idle");
+                  setMintInfo(null);
                 }}
               >
                 Screen another address
