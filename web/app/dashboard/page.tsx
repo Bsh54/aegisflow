@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { gate, VERDICT_LABELS, EXPLORER, GATE_ADDRESS } from "@/lib/contract";
+import { VERDICT_LABELS, EXPLORER, GATE_ADDRESS } from "@/lib/contract";
 import { ExternalLink, ShieldCheck } from "@/components/icons";
 
 interface Row {
@@ -25,18 +25,10 @@ export default function Dashboard() {
   useEffect(() => {
     (async () => {
       try {
-        const g = gate();
-        const events = await g.queryFilter(g.filters.Screened(), -50000);
-        const parsed = events
-          .map((e: any) => ({
-            addressHash: e.args[0] as string,
-            verdict: Number(e.args[1]),
-            timestamp: Number(e.args[2]),
-            fdcVerified: Boolean(e.args[4]),
-            tx: e.transactionHash,
-          }))
-          .reverse();
-        setRows(parsed);
+        const res = await fetch("/api/screenings", { cache: "no-store" });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? `HTTP ${res.status}`);
+        setRows(data.rows);
       } catch (e: any) {
         setError(e.message ?? String(e));
       }

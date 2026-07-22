@@ -30,16 +30,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </span>
               AegisFlow
             </Link>
-            <div className="flex items-center gap-2 md:gap-4 text-sm">
+            <div className="flex items-center gap-2 md:gap-3 text-sm">
               <Link
                 href="/dashboard"
-                className="text-mutedfg hover:text-fg transition duration-200 px-3 py-2 rounded-lg hover:bg-surface cursor-pointer"
+                className="btn-ghost !py-2 !min-h-[40px] !px-4 text-sm"
               >
                 Dashboard
               </Link>
               <Link
                 href="/proof"
-                className="text-mutedfg hover:text-fg transition duration-200 px-3 py-2 rounded-lg hover:bg-surface cursor-pointer"
+                className="btn-ghost !py-2 !min-h-[40px] !px-4 text-sm"
               >
                 Proof
               </Link>
@@ -47,11 +47,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 href="https://github.com/Bsh54/aegisflow"
                 target="_blank"
                 aria-label="GitHub repository"
-                className="text-mutedfg hover:text-fg transition duration-200 p-2 rounded-lg hover:bg-surface cursor-pointer"
+                className="text-mutedfg hover:text-fg transition duration-200 p-2 rounded-lg hover:bg-surface cursor-pointer hidden sm:block"
               >
                 <Github />
               </a>
-              <Link href="/verify" className="btn !py-2 !min-h-[40px] text-sm">
+              <Link href="/verify" className="btn !py-2 !min-h-[40px] !px-4 text-sm">
                 Run verification
               </Link>
             </div>

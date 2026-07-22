@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { gate } from "@/lib/contract";
 
 interface Health {
   status: string;
@@ -60,17 +59,14 @@ export function LiveMetrics() {
   useEffect(() => {
     (async () => {
       try {
-        const g = gate();
-        const events = await g.queryFilter(g.filters.Screened(), -50000);
-        const rows = events.map((e: any) => ({
-          verdict: Number(e.args[1]),
-          fdc: Boolean(e.args[4]),
-        }));
+        const res = await fetch("/api/screenings", { cache: "no-store" });
+        const data = await res.json();
+        const rows: { verdict: number; fdcVerified: boolean }[] = data.rows ?? [];
         setM({
           total: rows.length,
           cleared: rows.filter((r) => r.verdict === 1).length,
           blocked: rows.filter((r) => r.verdict === 3).length,
-          fdc: rows.filter((r) => r.fdc).length,
+          fdc: rows.filter((r) => r.fdcVerified).length,
         });
       } catch {
         setM({ total: 0, cleared: 0, blocked: 0, fdc: 0 });
