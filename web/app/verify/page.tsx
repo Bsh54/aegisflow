@@ -76,7 +76,7 @@ export default function Verify() {
   const [error, setError] = useState("");
 
   const [mintState, setMintState] = useState<"idle" | "running" | "fulfilled" | "refused">("idle");
-  const [mintInfo, setMintInfo] = useState<{ txUrl?: string; reason?: string; released?: string } | null>(null);
+  const [mintInfo, setMintInfo] = useState<{ txUrl?: string; txHash?: string; reason?: string; released?: string } | null>(null);
 
   const busy = step === "screening" || step === "onchain";
 
@@ -92,10 +92,10 @@ export default function Verify() {
       const data = await res.json();
       if (data.outcome === "fulfilled") {
         setMintState("fulfilled");
-        setMintInfo({ txUrl: data.explorerUrl, released: data.released });
+        setMintInfo({ txUrl: data.explorerUrl, txHash: data.txHash, released: data.released });
       } else {
         setMintState("refused");
-        setMintInfo({ reason: data.reason });
+        setMintInfo({ txUrl: data.explorerUrl, txHash: data.txHash, reason: data.reason });
       }
     } catch (e: any) {
       setMintState("refused");
@@ -296,44 +296,38 @@ export default function Verify() {
               {mintState === "fulfilled" && mintInfo && (
                 <div className="rounded-xl border border-clear/40 bg-clear/10 p-4">
                   <p className="flex items-center gap-2 text-clear font-semibold text-sm">
-                    <Check className="w-4 h-4" /> FXRP released
+                    <Check className="w-4 h-4" /> FXRP released — confirmed on-chain
                   </p>
-                  <p className="text-xs text-mutedfg mt-1 font-mono">
-                    +{(Number(mintInfo.released) / 1e6).toFixed(0)} FXRP delivered ·{" "}
-                    <a className="link text-fg" target="_blank" href={mintInfo.txUrl}>
-                      view transaction ↗
-                    </a>
+                  <p className="text-xs text-mutedfg mt-2">
+                    +{(Number(mintInfo.released) / 1e6).toFixed(0)} FXRP delivered. A real
+                    transaction was mined on Coston2:
                   </p>
+                  <a
+                    className="link text-fg font-mono text-xs inline-flex items-center gap-1.5 mt-2 break-all"
+                    target="_blank"
+                    href={mintInfo.txUrl}
+                  >
+                    {mintInfo.txHash} <ExternalLink />
+                  </a>
                 </div>
               )}
               {mintState === "refused" && mintInfo && (
                 <div className="rounded-xl border border-blocked/40 bg-blocked/10 p-4">
                   <p className="flex items-center gap-2 text-blocked font-semibold text-sm">
-                    <XCircle className="w-4 h-4" /> Conversion refused
+                    <XCircle className="w-4 h-4" /> Conversion rejected — recorded on-chain
                   </p>
-                  <p className="text-xs text-mutedfg mt-1">{mintInfo.reason}</p>
+                  <p className="text-xs text-mutedfg mt-2">{mintInfo.reason}</p>
+                  {mintInfo.txHash && (
+                    <a
+                      className="link text-fg font-mono text-xs inline-flex items-center gap-1.5 mt-2 break-all"
+                      target="_blank"
+                      href={mintInfo.txUrl}
+                    >
+                      {mintInfo.txHash} (failed tx) <ExternalLink />
+                    </a>
+                  )}
                 </div>
               )}
-            </div>
-
-            {/* Next steps (error recovery / clear paths) */}
-            <div className="flex flex-wrap gap-3 mt-6">
-              <button
-                className="btn-ghost !py-2 !min-h-[40px] text-sm"
-                onClick={() => {
-                  setAddr("");
-                  setStep("idle");
-                  setResult(null);
-                  setOnchain(null);
-                  setMintState("idle");
-                  setMintInfo(null);
-                }}
-              >
-                Screen another address
-              </button>
-              <a href="/proof" className="btn-ghost !py-2 !min-h-[40px] text-sm">
-                How is this proven?
-              </a>
             </div>
           </div>
         </div>
