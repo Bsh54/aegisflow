@@ -1,0 +1,28 @@
+<svg width="480" height="480" viewBox="0 0 480 480" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="480" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0A0A0F"/>
+      <stop offset="1" stop-color="#020203"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="240" y1="96" x2="240" y2="392" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#E0245E"/>
+      <stop offset="1" stop-color="#B01247"/>
+    </linearGradient>
+  </defs>
+
+  <!-- backdrop -->
+  <rect width="480" height="480" rx="104" fill="url(#bg)"/>
+  <rect x="1" y="1" width="478" height="478" rx="103" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="2"/>
+
+  <!-- shield -->
+  <path d="M240 96 L360 140 V250 C360 322 308 366 240 392 C172 366 120 322 120 250 V140 Z"
+        fill="url(#shield)"/>
+
+  <!-- inner cut for depth -->
+  <path d="M240 132 L328 164 V250 C328 306 289 341 240 361 C191 341 152 306 152 250 V164 Z"
+        fill="#0A0A0F" fill-opacity="0.18"/>
+
+  <!-- check mark -->
+  <path d="M198 246 L228 276 L296 208" stroke="#FFFFFF" stroke-width="26"
+        stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
