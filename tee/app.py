@@ -48,6 +48,7 @@ THREAT_LISTS = [
         "cross_check": True,
         "required": True,
         "source_url": "https://ofac.treasury.gov/",
+        "data_url": "https://raw.githubusercontent.com/0xB10C/ofac-sanctioned-digital-currency-addresses/lists/sanctioned_addresses_XRP.txt",
     },
     {
         "id": "FBI-LAZARUS",
@@ -58,6 +59,7 @@ THREAT_LISTS = [
         "cross_check": False,
         "required": False,
         "source_url": "https://www.opensanctions.org/datasets/us_fbi_lazarus_crypto/",
+        "data_url": f"{OPENSANCTIONS_BASE}/us_fbi_lazarus_crypto/targets.simple.csv",
     },
     {
         "id": "IL-NBCTF",
@@ -68,6 +70,7 @@ THREAT_LISTS = [
         "cross_check": False,
         "required": False,
         "source_url": "https://www.opensanctions.org/datasets/il_mod_crypto/",
+        "data_url": f"{OPENSANCTIONS_BASE}/il_mod_crypto/targets.simple.csv",
     },
     {
         "id": "RANSOMWHERE",
@@ -78,6 +81,7 @@ THREAT_LISTS = [
         "cross_check": False,
         "required": False,
         "source_url": "https://www.opensanctions.org/datasets/ransomwhere/",
+        "data_url": f"{OPENSANCTIONS_BASE}/ransomwhere/targets.simple.csv",
     },
 ]
 
@@ -224,6 +228,7 @@ async def sanctions() -> dict:
             "error": entry.get("error"),
             "required": spec["required"],
             "source_url": spec["source_url"],
+            "data_url": spec.get("data_url"),
             "refreshed_at": int(entry.get("fetched_at", 0)),
         })
     return {"total": total, "lists": lists}

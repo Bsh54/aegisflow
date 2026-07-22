@@ -12,12 +12,20 @@ interface ThreatList {
   status: string;
   required: boolean;
   source_url: string;
+  data_url?: string;
 }
 
 export default function Sanctions() {
   const [data, setData] = useState<{ total: number; lists: ThreatList[] } | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState<string | null>(null);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  function copy(addr: string) {
+    navigator.clipboard?.writeText(addr);
+    setCopied(addr);
+    setTimeout(() => setCopied((c) => (c === addr ? null : c)), 1200);
+  }
 
   useEffect(() => {
     fetch("/api/sanctions", { cache: "no-store" })
@@ -84,30 +92,52 @@ export default function Sanctions() {
               </p>
             </div>
 
-            <div className="flex gap-4 mt-4 text-xs font-mono">
+            <div className="flex flex-wrap gap-4 mt-4 text-xs font-mono">
               <button
                 className="link text-mutedfg"
                 onClick={() => setOpen(open === l.id ? null : l.id)}
               >
-                {open === l.id ? "hide sample" : `view sample (${Math.min(l.count, 100)})`}
+                {open === l.id ? "hide addresses" : `view addresses (${Math.min(l.count, 100)})`}
               </button>
+              {l.data_url && (
+                <a
+                  className="link text-mutedfg inline-flex items-center gap-1"
+                  target="_blank"
+                  href={l.data_url}
+                >
+                  open the full list <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
               <a
                 className="link text-mutedfg inline-flex items-center gap-1"
                 target="_blank"
                 href={l.source_url}
               >
-                source <ExternalLink className="w-3 h-3" />
+                official source <ExternalLink className="w-3 h-3" />
               </a>
             </div>
 
             {open === l.id && (
               <div className="mt-4 bg-base border border-edge rounded-xl p-4 max-h-64 overflow-y-auto">
+                <p className="text-[10px] text-mutedfg mb-2">
+                  click any address to copy it, then paste it into{" "}
+                  <a href="/verify" className="link">Verify</a>.
+                </p>
                 {l.addresses_sample.length === 0 ? (
                   <p className="text-xs text-mutedfg font-mono">empty</p>
                 ) : (
-                  <ul className="text-xs font-mono text-mutedfg space-y-1">
+                  <ul className="text-xs font-mono space-y-1">
                     {l.addresses_sample.map((a) => (
-                      <li key={a} className="break-all">{a}</li>
+                      <li key={a}>
+                        <button
+                          className="text-mutedfg hover:text-fg break-all text-left transition cursor-pointer w-full"
+                          onClick={() => copy(a)}
+                          title="click to copy"
+                        >
+                          {a}
+                          {copied === a && <span className="text-clear ml-2">copied ✓</span>}
+                        </button>
+                      </li>
                     ))}
                   </ul>
                 )}
