@@ -42,6 +42,22 @@ export default function Proof() {
               <dd className="text-fg">Phala dstack · Intel TDX</dd>
             </div>
             <div className="flex gap-3">
+              <dt className="w-28 shrink-0">enclave url</dt>
+              <dd>
+                <a
+                  className="link text-fg inline-flex items-center gap-1.5 break-all"
+                  target="_blank"
+                  href={`https://${PHALA_APP_ID}-8000.dstack-pha-prod5.phala.network/health`}
+                >
+                  {PHALA_APP_ID}-8000.dstack-pha-prod5.phala.network <ExternalLink />
+                </a>
+              </dd>
+            </div>
+            <div className="flex gap-3">
+              <dt className="w-28 shrink-0">cert chain</dt>
+              <dd className="text-fg">End-entity ← Dstack App CA ← Dstack KMS CA</dd>
+            </div>
+            <div className="flex gap-3">
               <dt className="w-28 shrink-0">audit code</dt>
               <dd>
                 <a
@@ -54,6 +70,11 @@ export default function Proof() {
               </dd>
             </div>
           </dl>
+          <p className="text-xs text-mutedfg mt-4 leading-relaxed">
+            Anyone can hit the enclave URL directly — it&apos;s served on Phala&apos;s
+            dstack gateway, not our server — and verify the remote attestation with{" "}
+            <span className="font-mono text-fg">phala cvms attestation {PHALA_APP_ID}</span>.
+          </p>
         </section>
 
         <section className="card p-8">
